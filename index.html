@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- SEO Primary Meta Tags -->
+    <title>Esporte Radar - Transmissões Brasileirão, Futebol ao Vivo & Projetos Sociais</title>
+    <meta name="title" content="Esporte Radar - Transmissões Brasileirão, Futebol ao Vivo & Projetos Sociais" />
+    <meta name="description" content="Guia completo de onde assistir jogos de futebol ao vivo no Brasil (Globo, SporTV, Premiere, CazéTV, Prime Video) e encontrar projetos esportivos sociais de Jiu-Jitsu e escolinhas comunitárias nos bairros." />
+    <meta name="keywords" content="onde assistir futebol, jogo do flamengo ao vivo, transmissao brasileirao, jogos hoje ao vivo, premiere ao vivo, cazetv ao vivo, cbf transmissoes, jiu-jitsu gratuito igreja, projeto social futebol nos bairros, escolinha de futebol gratuita, esporte radar" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="author" content="Esporte Radar" />
+    <link rel="canonical" href="https://esporteradar.com.br/" />
+
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Esporte Radar" />
+    <meta property="og:url" content="https://esporteradar.com.br/" />
+    <meta property="og:title" content="Esporte Radar - Transmissões de Futebol ao Vivo & Projetos Sociais" />
+    <meta property="og:description" content="Saiba em qual canal ou streaming vai passar o jogo do seu time hoje e localize treinos gratuitos de Jiu-Jitsu e futebol comunitário no seu bairro." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Esporte Radar - Guia de Transmissões Esportivas & Projetos Comunitários" />
+    <meta name="twitter:description" content="Guia oficial de jogos do Brasileirão, Copa do Brasil, Libertadores e projetos sociais de jiu-jitsu e escolinhas nos bairros." />
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop&q=80" />
+
+    <!-- Schema.org JSON-LD Structured Data for Google Search -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Esporte Radar",
+        "url": "https://esporteradar.com.br/",
+        "description": "Guia de transmissões de jogos de futebol ao vivo no Brasil e mapeamento de projetos esportivos sociais comunitários.",
+        "inLanguage": "pt-BR",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://esporteradar.com.br/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    
+    <!-- PWA & Web App Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#05140d" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Esporte Radar" />
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/53/53283.png" />
+    
+    <!-- Google Publisher Tag (GPT) for Google Ad Manager -->
+    <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+    <script>
+      window.googletag = window.googletag || { cmd: [] };
+      window.googletag.cmd.push(function() {
+        // Map to track active timeouts per slot ID to prevent duplicate timers
+        var timeouts = {};
+
+        window.googletag.pubads().addEventListener('impressionViewable', function(event) {
+          var slot = event.slot;
+          var slotId = slot.getSlotElementId() || slot.getAdUnitPath();
+          console.log('[GAM] Slot became viewable. Initiating 30-second refresh countdown for slot ID:', slotId);
+          
+          if (timeouts[slotId]) {
+            clearTimeout(timeouts[slotId]);
+          }
+          
+          timeouts[slotId] = setTimeout(function() {
+            console.log('[GAM] 30-second viewability timer completed. Refreshing slot:', slotId);
+            window.googletag.pubads().refresh([slot]);
+            delete timeouts[slotId];
+          }, 30000);
+        });
+      });
+    </script>
+  </head>
+  <body class="bg-[#061c12]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

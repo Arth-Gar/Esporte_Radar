@@ -1,0 +1,2 @@
+# Esporte Radar - Authorized Digital Sellers (ads.txt)
+google.com, pub-6786401860837559, DIRECT, f08c47fec0942fa0
