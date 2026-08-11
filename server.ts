@@ -1076,6 +1076,51 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
   return scrapedGames;
 }
 
+// Dynamic status calculator based on match date and start time (America/Sao_Paulo timezone - UTC-3)
+function calculateMatchStatus(dateStr: string, timeStr: string, rawStatus?: string): 'agendado' | 'ao_vivo' | 'finalizado' {
+  if (rawStatus) {
+    const s = String(rawStatus).toLowerCase();
+    if (s.includes('finaliz') || s.includes('encerrad') || s.includes('terminad') || s.includes('concluid') || s.includes('fim')) {
+      return 'finalizado';
+    }
+    if (s.includes('ao vivo') || s.includes('em andamento') || s.includes('jogando')) {
+      return 'ao_vivo';
+    }
+  }
+
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+
+      const [hoursStr, minutesStr] = (timeStr || '16:00').split(':');
+      const hours = parseInt(hoursStr, 10) || 16;
+      const minutes = parseInt(minutesStr, 10) || 0;
+
+      // Brasilia is UTC-3. Match start in UTC ms:
+      const matchStartUtcMs = Date.UTC(year, month, day, hours + 3, minutes);
+      // Typical match duration: 115 minutes
+      const matchEndUtcMs = matchStartUtcMs + (115 * 60 * 1000);
+
+      const nowMs = Date.now();
+
+      if (nowMs < matchStartUtcMs) {
+        return 'agendado';
+      } else if (nowMs >= matchStartUtcMs && nowMs <= matchEndUtcMs) {
+        return 'ao_vivo';
+      } else {
+        return 'finalizado';
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao calcular status da partida:', err);
+  }
+
+  return 'agendado';
+}
+
 // API to load matches
 app.get('/api/jogos', async (req, res) => {
   try {
@@ -1085,22 +1130,28 @@ app.get('/api/jogos', async (req, res) => {
     const fallback = generateFallbackGames();
     
     // Combine everything: scraped CBF (futebol), other sports, fallback
-    const combined: any[] = [];
+    const rawCombined: any[] = [];
     
     // Add scraped CBF matches
     scrapedCBF.forEach(scrapedGame => {
-      combined.push(scrapedGame);
+      rawCombined.push(scrapedGame);
     });
 
     // Add other sports matches
     otherSports.forEach(sportGame => {
-      combined.push(sportGame);
+      rawCombined.push(sportGame);
     });
 
     // Add fallback matches
     fallback.forEach(fallbackGame => {
-      combined.push(fallbackGame);
+      rawCombined.push(fallbackGame);
     });
+
+    // Dynamically re-calculate match status for every match based on current date & time
+    const combined = rawCombined.map(match => ({
+      ...match,
+      status: calculateMatchStatus(match.date, match.time, match.rawStatus)
+    }));
 
     // Re-sort games by date and time
     combined.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));

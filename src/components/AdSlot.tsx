@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 declare global {
   interface Window {
@@ -18,11 +18,23 @@ interface AdSlotProps {
  * Standard inline Google Ad Manager slot component
  */
 export const AdSlot: React.FC<AdSlotProps> = ({ adUnit, sizes, id, label = "Publicidade", className }) => {
+  const [isEmpty, setIsEmpty] = useState(false);
+
   useEffect(() => {
     window.googletag = window.googletag || { cmd: [] };
     let slot: any = null;
 
     window.googletag.cmd.push(() => {
+      // Configure collapse empty divs globally for GAM
+      window.googletag.pubads().collapseEmptyDivs();
+
+      // Listen for slot render finished event to hide wrapper if no ad returned
+      window.googletag.pubads().addEventListener('slotRenderEnded', (event: any) => {
+        if (event.slot === slot && event.isEmpty) {
+          setIsEmpty(true);
+        }
+      });
+
       // Define the slot with width/height and HTML div target ID
       slot = window.googletag.defineSlot(adUnit, sizes, id);
       
@@ -49,6 +61,10 @@ export const AdSlot: React.FC<AdSlotProps> = ({ adUnit, sizes, id, label = "Publ
     };
   }, [adUnit, id, JSON.stringify(sizes)]);
 
+  if (isEmpty) {
+    return null;
+  }
+
   return (
     <div className={`w-full flex flex-col items-center justify-center p-2.5 my-3 bg-[#0a2e1e]/30 border border-green-900/20 rounded-lg ${className || ''}`}>
       <span className="text-[8px] font-mono tracking-widest text-green-600/80 uppercase mb-1.5 select-none">
@@ -72,6 +88,8 @@ export const useAnchorAd = (adUnit: string) => {
     let anchorSlot: any = null;
 
     window.googletag.cmd.push(() => {
+      window.googletag.pubads().collapseEmptyDivs();
+
       // Google Publisher Tag native bottom anchor layout format
       anchorSlot = window.googletag.defineOutOfPageSlot(
         adUnit,

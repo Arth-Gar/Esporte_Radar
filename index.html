@@ -58,6 +58,9 @@
     <script>
       window.googletag = window.googletag || { cmd: [] };
       window.googletag.cmd.push(function() {
+        // Automatically collapse empty ad slots
+        window.googletag.pubads().collapseEmptyDivs();
+
         // Map to track active timeouts per slot ID to prevent duplicate timers
         var timeouts = {};
 

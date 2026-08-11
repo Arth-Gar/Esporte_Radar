@@ -411,11 +411,11 @@ export function SocialProjectsView() {
               <select
                 value={selectedNeighborhood}
                 onChange={e => setSelectedNeighborhood(e.target.value)}
-                className="w-full bg-[#081f13] border border-green-900/60 text-xs rounded-lg px-3 py-2.5 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer"
+                className="w-full bg-[#081f13] border-none text-xs rounded-lg px-3 py-2.5 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
               >
-                <option value="Tudo">📍 Todos os Bairros</option>
+                <option value="Tudo" className="uppercase bg-[#081f13]">📍 Todos os Bairros</option>
                 {neighborhoods.filter(n => n !== 'Tudo').map(n => (
-                  <option key={n} value={n}>Bairro: {n}</option>
+                  <option key={n} value={n} className="uppercase bg-[#081f13]">Bairro: {n}</option>
                 ))}
               </select>
             </div>
@@ -425,11 +425,11 @@ export function SocialProjectsView() {
               <select
                 value={selectedSport}
                 onChange={e => setSelectedSport(e.target.value)}
-                className="w-full bg-[#081f13] border border-green-900/60 text-xs rounded-lg px-3 py-2.5 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer"
+                className="w-full bg-[#081f13] border-none text-xs rounded-lg px-3 py-2.5 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
               >
-                <option value="Tudo">🥋 Todas Modalidades</option>
+                <option value="Tudo" className="uppercase bg-[#081f13]">🥋 Todas Modalidades</option>
                 {sports.filter(s => s !== 'Tudo').map(s => (
-                  <option key={s} value={s}>{s}</option>
+                  <option key={s} value={s} className="uppercase bg-[#081f13]">{s}</option>
                 ))}
               </select>
             </div>

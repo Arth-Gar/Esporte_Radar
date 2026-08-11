@@ -263,7 +263,7 @@ export default function App() {
                 )}
               </div>
               <p className="text-xs text-green-400 font-mono tracking-wider mt-0.5">
-                CALENDÁRIO ATUALIZADO
+                CALENDÁRIO BRASILEIRO DE PARTIDAS
               </p>
             </div>
           </div>
@@ -290,7 +290,7 @@ export default function App() {
       {/* SPORTS MODALITY TAB SELECTOR */}
       <nav className="bg-[#031109] border-b border-green-950 px-6 md:px-8 py-3 shrink-0 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
-          <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest shrink-0 mr-1 flex items-center gap-1">
+          <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0 mr-1 flex items-center gap-1">
             <TrendingUp className="h-3.5 w-3.5 text-seagreen" /> Modalidade:
           </span>
           {SPORTS_LIST.map(sport => {
@@ -307,17 +307,17 @@ export default function App() {
                   setSelectedDivision('Tudo');
                   setSelectedBroadcaster('Tudo');
                 }}
-                className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg shrink-0 transition-all cursor-pointer flex items-center gap-2 ${
+                className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg shrink-0 transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wider ${
                   isActive
-                    ? 'bg-seagreen text-white border border-seagreen shadow-md scale-102 ring-2 ring-seagreen/50'
-                    : 'bg-[#081f13] text-emerald-200 border border-green-900/60 hover:bg-[#0e2f1f] hover:text-white'
+                    ? 'bg-seagreen text-white shadow-sm scale-102 ring-1 ring-seagreen/40'
+                    : 'bg-[#081f13] text-emerald-300 hover:bg-[#0e2f1f] hover:text-white'
                 }`}
               >
                 <span className="text-sm">{sport.icon}</span>
                 <span>{sport.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isActive ? 'bg-[#020704] text-seagreen font-bold' : 'bg-green-950 text-green-400 border border-green-800/50'
+                    isActive ? 'bg-[#020704] text-seagreen font-bold' : 'bg-green-950/80 text-emerald-300'
                   }`}
                 >
                   {count}
@@ -337,16 +337,16 @@ export default function App() {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-green-950/40 pb-2">
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 text-xs font-bold text-green-300 hover:text-white uppercase tracking-widest cursor-pointer select-none"
+              className="flex items-center gap-2 text-xs font-bold text-emerald-300 hover:text-white uppercase tracking-widest cursor-pointer select-none"
             >
               <SlidersHorizontal className="h-4 w-4 text-seagreen" />
               <span>Filtros e Busca</span>
-              {showFilters ? <ChevronUp className="h-4 w-4 text-green-500" /> : <ChevronDown className="h-4 w-4 text-green-500" />}
+              {showFilters ? <ChevronUp className="h-4 w-4 text-seagreen" /> : <ChevronDown className="h-4 w-4 text-seagreen" />}
             </button>
             
             {/* Short indicator of active filter terms if collapsed */}
             {!showFilters && (
-              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-green-400 font-mono">
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-emerald-300 font-mono">
                 {searchTerm && (
                   <span className="bg-[#092215] px-2 py-0.5 rounded border border-green-900/30">
                     "{searchTerm}"
@@ -407,7 +407,7 @@ export default function App() {
                     
                     {/* Search */}
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest shrink-0">Busca</span>
+                      <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Busca</span>
                       <div className="relative w-full">
                         <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-green-600" />
                         <input 
@@ -422,29 +422,29 @@ export default function App() {
 
                     {/* Division */}
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest shrink-0">Divisão</span>
+                      <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Divisão</span>
                       <select 
                         value={selectedDivision}
                         onChange={e => setSelectedDivision(e.target.value)}
-                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer"
+                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
                       >
-                        <option value="Tudo">Todas as Divisões</option>
+                        <option value="Tudo" className="uppercase bg-[#081f13]">Todas as Divisões</option>
                         {divisionsList.filter(d => d !== 'Tudo').map(d => (
-                          <option key={d} value={d}>{d}</option>
+                          <option key={d} value={d} className="uppercase bg-[#081f13]">{d}</option>
                         ))}
                       </select>
                     </div>
 
                     {/* Broadcaster */}
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest shrink-0">Canal</span>
+                      <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Canal</span>
                       <select
                         value={selectedBroadcaster}
                         onChange={e => setSelectedBroadcaster(e.target.value)}
-                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer"
+                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
                       >
                         {broadcastersList.map(b => (
-                          <option key={b} value={b}>
+                          <option key={b} value={b} className="uppercase bg-[#081f13]">
                             {b === 'Tudo' ? 'Todas as Plataformas' : b}
                           </option>
                         ))}
@@ -453,16 +453,16 @@ export default function App() {
 
                     {/* Match State */}
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest shrink-0">Situação</span>
+                      <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Situação</span>
                       <select
                         value={selectedStatus}
                         onChange={e => setSelectedStatus(e.target.value as any)}
-                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer"
+                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
                       >
-                        <option value="Tudo">Qualquer Situação</option>
-                        <option value="ao_vivo">Ao vivo agora</option>
-                        <option value="agendado">Agendados</option>
-                        <option value="finalizado">Finalizados</option>
+                        <option value="Tudo" className="uppercase bg-[#081f13]">Qualquer Situação</option>
+                        <option value="ao_vivo" className="uppercase bg-[#081f13]">Ao vivo agora</option>
+                        <option value="agendado" className="uppercase bg-[#081f13]">Agendados</option>
+                        <option value="finalizado" className="uppercase bg-[#081f13]">Finalizados</option>
                       </select>
                     </div>
 
@@ -712,10 +712,13 @@ export default function App() {
                         {/* Versus state */}
                         <div className="flex flex-col items-center justify-center shrink-0 px-1.5">
                           {isFinished ? (
-                            <span className="text-xs font-mono font-bold text-green-300">2 - 1</span>
+                            <span className="text-[9px] font-mono font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded border border-white/20 uppercase tracking-wider">
+                              FINALIZADO
+                            </span>
                           ) : isLive ? (
-                            <span className="text-[11px] font-mono font-black text-red-400 animate-pulse bg-red-950/40 px-1.5 py-0.5 rounded border border-red-900/20">
-                              1-1
+                            <span className="text-[9px] font-mono font-extrabold text-red-400 animate-pulse bg-red-950/60 px-2 py-0.5 rounded border border-red-800/40 uppercase tracking-wider flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
+                              AO VIVO
                             </span>
                           ) : (
                             <span className="text-seagreen text-[10px] font-black italic uppercase tracking-tighter bg-green-950/40 px-1.5 py-0.5 rounded border border-green-900/25">VS</span>
@@ -888,20 +891,20 @@ export default function App() {
                     </span>
                   </div>
 
-                  {/* VS / Score */}
+                  {/* VS / Score / Status */}
                   <div className="col-span-1 flex flex-col items-center justify-center">
                     {selectedMatch.status === 'ao_vivo' ? (
                       <div className="space-y-1">
-                        <span className="text-[8px] font-bold text-red-500 uppercase tracking-wider block animate-pulse">LIVE</span>
-                        <div className="text-2xl font-mono font-black text-white bg-red-950/80 px-2 py-1 rounded border border-red-900/30">
-                          1-1
+                        <span className="text-[8px] font-bold text-red-500 uppercase tracking-wider block animate-pulse">STATUS</span>
+                        <div className="text-xs font-mono font-black text-red-400 bg-red-950/80 px-2 py-1 rounded border border-red-900/30 whitespace-nowrap">
+                          AO VIVO
                         </div>
                       </div>
                     ) : selectedMatch.status === 'finalizado' ? (
                       <div className="space-y-1">
-                        <span className="text-[8px] font-bold text-green-500 uppercase tracking-wider block">FIM</span>
-                        <div className="text-2xl font-mono font-black text-seagreen bg-green-950/80 px-2 py-1 rounded border border-green-900/30">
-                          2-1
+                        <span className="text-[8px] font-bold text-green-500 uppercase tracking-wider block">STATUS</span>
+                        <div className="text-xs font-mono font-black text-seagreen bg-green-950/80 px-2 py-1 rounded border border-green-900/30 whitespace-nowrap">
+                          FINALIZADO
                         </div>
                       </div>
                     ) : (
