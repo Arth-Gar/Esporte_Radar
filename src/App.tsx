@@ -89,16 +89,19 @@ export default function App() {
 
     try {
       const response = await fetch(`/api/jogos${isRefresh ? '?refresh=true' : ''}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
       const result = await response.json();
-      if (result.success) {
+      if (result && result.success && Array.isArray(result.data)) {
         setMatches(result.data);
         setScrapeInfo({
-          scrapedCount: result.info.scrapedCount || result.info.futebolCount || 0,
-          fallbackCount: result.info.fallbackCount || 0
+          scrapedCount: result.info?.scrapedCount || result.info?.futebolCount || 0,
+          fallbackCount: result.info?.fallbackCount || 0
         });
       }
     } catch (error) {
-      console.error('Falha ao buscar dados de transmissões:', error);
+      console.warn('Conexão instável ao buscar transmissões. Mantendo lista atual:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -254,16 +257,16 @@ export default function App() {
                 {scrapeInfo?.scrapedCount && scrapeInfo.scrapedCount > 0 ? (
                   <span className="text-[9px] font-mono tracking-wider uppercase px-2 py-0.5 rounded bg-green-900 text-green-300 border border-green-800/60 flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse"></span>
-                    sincronizado
+                    Atualizado
                   </span>
                 ) : (
                   <span className="text-[9px] font-mono tracking-wider uppercase px-2 py-0.5 rounded bg-seagreen/20 text-seagreen border border-seagreen/30">
-                    Sincronizado
+                    Atualizado
                   </span>
                 )}
               </div>
               <p className="text-xs text-green-400 font-mono tracking-wider mt-0.5">
-                CALENDÁRIO BRASILEIRO DE PARTIDAS
+                PARTIDAS BRASILEIRAS
               </p>
             </div>
           </div>
@@ -657,129 +660,131 @@ export default function App() {
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ duration: 0.2 }}
                       onClick={() => setSelectedMatch(match)}
-                      className="group grid grid-cols-1 lg:grid-cols-12 items-center bg-[oklch(85.2%_0.199_91.936)]/[0.04] border border-[oklch(85.2%_0.199_91.936)]/35 hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] hover:border-[oklch(0.77_0.16_199.2)]/80 rounded-lg px-4 py-3.5 lg:py-2 transition-all duration-200 cursor-pointer relative shadow-[0_2px_8px_rgba(0,0,0,0.15)] hover:shadow-md gap-y-2 lg:gap-y-0"
+                      className="group flex flex-col bg-[oklch(85.2%_0.199_91.936)]/[0.04] border border-[oklch(85.2%_0.199_91.936)]/35 hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] hover:border-[oklch(0.77_0.16_199.2)]/80 rounded-lg p-3 lg:p-2.5 transition-all duration-200 cursor-pointer relative shadow-[0_2px_8px_rgba(0,0,0,0.15)] hover:shadow-md gap-2"
                     >
                       {/* Decorative live bar */}
                       {isLive && (
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 rounded-l"></div>
                       )}
 
-                      {/* Column 1: Date & Hour */}
-                      <div className="col-span-2 mb-1 lg:mb-0">
-                        <div className="flex lg:flex-col items-baseline lg:items-start gap-2">
-                          <p className="text-xs font-bold text-white uppercase tracking-tight">
-                            {dateInfo.shortDate} às {match.time}
-                          </p>
-                          <p className="text-[9px] text-green-400 font-mono uppercase tracking-wider">
-                            {isLive ? 'AO VIVO' : dateInfo.dayOfWeek}
-                          </p>
+                      {/* Top Meta Header: Date/Time + Division Tag + Broadcasters */}
+                      <div className="flex items-center justify-between gap-2 border-b border-green-900/20 pb-1.5">
+                        {/* Date, Time & Division Tag (Moved higher up to avoid crowding team names) */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-white uppercase tracking-tight">
+                              {dateInfo.shortDate} às {match.time}
+                            </span>
+                            <span className="text-[9px] text-emerald-300 font-mono uppercase tracking-wider">
+                              {isLive ? '• AO VIVO' : `• ${dateInfo.dayOfWeek}`}
+                            </span>
+                          </div>
+                          <span className={`px-1.5 py-0.5 text-[8px] font-bold rounded uppercase tracking-wider ${getDivisionStyle(match.division)}`}>
+                            {match.division}
+                          </span>
+                        </div>
+
+                        {/* Broadcaster channels */}
+                        <div className="flex items-center gap-1 flex-wrap shrink-0">
+                          {match.broadcasters.map((b, i) => {
+                            const style = getBroadcasterStyle(b);
+                            return (
+                              <div 
+                                key={i} 
+                                className={`px-1.5 py-0.5 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-300 border border-green-800/30 ${style.bg}`}
+                              >
+                                {b}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
-                      {/* Column 2: Division tag */}
-                      <div className="col-span-1 mb-2 lg:mb-0">
-                        <span className={`inline-block px-2 py-0.5 text-[9px] font-bold rounded uppercase tracking-wider ${getDivisionStyle(match.division)}`}>
-                          {match.division}
-                        </span>
-                      </div>
-
-                      {/* Column 3: Matchup with logos */}
-                      <div className="col-span-5 flex items-center justify-between lg:justify-center gap-3 my-1.5 lg:my-0 bg-[#020704]/30 lg:bg-transparent p-2 lg:p-0 rounded-lg border border-[oklch(85.2%_0.199_91.936)]/15 lg:border-none">
-                        
-                        {/* Home team */}
-                        <div className="flex items-center gap-2 w-5/12 justify-end">
-                          <span className="text-xs font-bold text-white text-right truncate">
-                            {match.homeTeam}
-                          </span>
-                          <div className="relative shrink-0 w-7 h-7 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
-                            <img 
-                              src={match.homeTeamLogo} 
-                              alt={match.homeTeam} 
-                              referrerPolicy="no-referrer"
-                              className="w-5 h-5 object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                                const fallback = (e.target as HTMLElement).nextElementSibling;
-                                if (fallback) fallback.classList.remove('hidden');
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white hidden">
-                              {match.homeTeam.substring(0, 3).toUpperCase()}
+                      {/* Main Matchup Row */}
+                      <div className="flex items-center justify-between gap-2 sm:gap-3 pt-0.5">
+                        {/* Team matchup */}
+                        <div className="flex-1 flex items-center justify-between md:justify-center gap-1.5 sm:gap-3 bg-[#020704]/30 md:bg-transparent p-2 md:p-0 rounded-lg min-w-0">
+                          
+                          {/* Home team */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 w-[45%] md:w-5/12 min-w-0 justify-end">
+                            <span className="text-[11px] sm:text-xs md:text-sm font-bold text-white text-right line-clamp-2 break-words leading-tight min-w-0">
+                              {match.homeTeam}
+                            </span>
+                            <div className="relative shrink-0 w-7 h-7 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
+                              <img 
+                                src={match.homeTeamLogo} 
+                                alt={match.homeTeam} 
+                                referrerPolicy="no-referrer"
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                  const fallback = (e.target as HTMLElement).nextElementSibling;
+                                  if (fallback) fallback.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white hidden">
+                                {match.homeTeam.substring(0, 3).toUpperCase()}
+                              </div>
                             </div>
                           </div>
+
+                          {/* Versus state */}
+                          <div className="flex flex-col items-center justify-center shrink-0 px-1">
+                            {isFinished ? (
+                              <span className="text-[9px] font-mono font-bold text-slate-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/20 uppercase tracking-wider">
+                                FINALIZADO
+                              </span>
+                            ) : isLive ? (
+                              <span className="text-[9px] font-mono font-extrabold text-red-400 animate-pulse bg-red-950/60 px-1.5 py-0.5 rounded border border-red-800/40 uppercase tracking-wider flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
+                                AO VIVO
+                              </span>
+                            ) : (
+                              <span className="text-seagreen text-[10px] font-black italic uppercase tracking-tighter bg-green-950/40 px-1.5 py-0.5 rounded border border-green-900/25">VS</span>
+                            )}
+                          </div>
+
+                          {/* Away team */}
+                          <div className="flex items-center gap-1.5 sm:gap-2 w-[45%] md:w-5/12 min-w-0 justify-start">
+                            <div className="relative shrink-0 w-7 h-7 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
+                              <img 
+                                src={match.awayTeamLogo} 
+                                alt={match.awayTeam} 
+                                referrerPolicy="no-referrer"
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                  const fallback = (e.target as HTMLElement).nextElementSibling;
+                                  if (fallback) fallback.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white hidden">
+                                {match.awayTeam.substring(0, 3).toUpperCase()}
+                              </div>
+                            </div>
+                            <span className="text-[11px] sm:text-xs md:text-sm font-bold text-white text-left line-clamp-2 break-words leading-tight min-w-0">
+                              {match.awayTeam}
+                            </span>
+                          </div>
+
                         </div>
 
-                        {/* Versus state */}
-                        <div className="flex flex-col items-center justify-center shrink-0 px-1.5">
-                          {isFinished ? (
-                            <span className="text-[9px] font-mono font-bold text-slate-300 bg-white/10 px-2 py-0.5 rounded border border-white/20 uppercase tracking-wider">
-                              FINALIZADO
+                        {/* Action click button */}
+                        <div className="hidden md:block shrink-0 text-right">
+                          {isLive ? (
+                            <span className="inline-block px-3 py-1 bg-green-600/20 text-green-400 text-[10px] font-bold rounded border border-green-600/40 uppercase tracking-wider group-hover:bg-green-600 group-hover:text-black transition-all">
+                              Assistir
                             </span>
-                          ) : isLive ? (
-                            <span className="text-[9px] font-mono font-extrabold text-red-400 animate-pulse bg-red-950/60 px-2 py-0.5 rounded border border-red-800/40 uppercase tracking-wider flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
-                              AO VIVO
+                          ) : isFinished ? (
+                            <span className="inline-block px-3 py-1 bg-white/5 text-slate-500 text-[10px] font-bold rounded border border-white/15 uppercase tracking-wider">
+                              Detalhes
                             </span>
                           ) : (
-                            <span className="text-seagreen text-[10px] font-black italic uppercase tracking-tighter bg-green-950/40 px-1.5 py-0.5 rounded border border-green-900/25">VS</span>
+                            <span className="inline-block px-3 py-1 bg-white/5 text-[oklch(85.2%_0.199_91.936)] group-hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] group-hover:text-cyan-100 group-hover:border-[oklch(0.77_0.16_199.2)] text-[10px] font-bold rounded border border-[oklch(85.2%_0.199_91.936)]/30 transition-all uppercase tracking-wider">
+                              Transmitir
+                            </span>
                           )}
                         </div>
-
-                        {/* Away team */}
-                        <div className="flex items-center gap-2 w-5/12 justify-start">
-                          <div className="relative shrink-0 w-7 h-7 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
-                            <img 
-                              src={match.awayTeamLogo} 
-                              alt={match.awayTeam} 
-                              referrerPolicy="no-referrer"
-                              className="w-5 h-5 object-contain"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                                const fallback = (e.target as HTMLElement).nextElementSibling;
-                                if (fallback) fallback.classList.remove('hidden');
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white hidden">
-                              {match.awayTeam.substring(0, 3).toUpperCase()}
-                            </div>
-                          </div>
-                          <span className="text-xs font-bold text-white text-left truncate">
-                            {match.awayTeam}
-                          </span>
-                        </div>
-
-                      </div>
-
-                      {/* Column 4: Broadcaster channels */}
-                      <div className="col-span-2 mb-2 lg:mb-0 flex gap-1 flex-wrap">
-                        {match.broadcasters.map((b, i) => {
-                          const style = getBroadcasterStyle(b);
-                          return (
-                            <div 
-                              key={i} 
-                              className={`px-1.5 py-0.5 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-300 border border-green-800/30 ${style.bg}`}
-                            >
-                              {b}
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Column 5: Action click button */}
-                      <div className="col-span-2 text-right">
-                        {isLive ? (
-                          <span className="inline-block w-full lg:w-auto text-center px-3 py-1 bg-green-600/20 text-green-400 text-[10px] font-bold rounded border border-green-600/40 uppercase tracking-wider group-hover:bg-green-600 group-hover:text-black transition-all">
-                            Assistir
-                          </span>
-                        ) : isFinished ? (
-                          <span className="inline-block w-full lg:w-auto text-center px-3 py-1 bg-white/5 text-slate-500 text-[10px] font-bold rounded border border-white/15 uppercase tracking-wider">
-                            Detalhes
-                          </span>
-                        ) : (
-                          <span className="inline-block w-full lg:w-auto text-center px-3 py-1 bg-white/5 text-[oklch(85.2%_0.199_91.936)] group-hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] group-hover:text-cyan-100 group-hover:border-[oklch(0.77_0.16_199.2)] text-[10px] font-bold rounded border border-[oklch(85.2%_0.199_91.936)]/30 transition-all uppercase tracking-wider">
-                            Transmitir
-                          </span>
-                        )}
                       </div>
 
                     </motion.div>
@@ -892,23 +897,23 @@ export default function App() {
                   </div>
 
                   {/* VS / Score / Status */}
-                  <div className="col-span-1 flex flex-col items-center justify-center">
+                  <div className="col-span-1 flex flex-col items-center justify-center !-mt-[35px]" style={{ marginTop: '-35px' }}>
                     {selectedMatch.status === 'ao_vivo' ? (
-                      <div className="space-y-1">
+                      <div className="space-y-1 !-mt-[35px]" style={{ marginTop: '-35px' }}>
                         <span className="text-[8px] font-bold text-red-500 uppercase tracking-wider block animate-pulse">STATUS</span>
                         <div className="text-xs font-mono font-black text-red-400 bg-red-950/80 px-2 py-1 rounded border border-red-900/30 whitespace-nowrap">
                           AO VIVO
                         </div>
                       </div>
                     ) : selectedMatch.status === 'finalizado' ? (
-                      <div className="space-y-1">
+                      <div className="space-y-1 !-mt-[35px]" style={{ marginTop: '-35px' }}>
                         <span className="text-[8px] font-bold text-green-500 uppercase tracking-wider block">STATUS</span>
                         <div className="text-xs font-mono font-black text-seagreen bg-green-950/80 px-2 py-1 rounded border border-green-900/30 whitespace-nowrap">
                           FINALIZADO
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="space-y-1 !-mt-[35px]" style={{ marginTop: '-35px' }}>
                         <span className="text-[8px] font-bold text-seagreen uppercase tracking-wider block">HORÁRIO</span>
                         <div className="text-xl font-mono font-black text-white">
                           {selectedMatch.time}

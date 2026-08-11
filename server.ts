@@ -920,6 +920,23 @@ function fetchJsonSecurely(urlStr: string): Promise<any> {
   });
 }
 
+// Retry fetchJsonSecurely with backoff to handle transient 502 / network glitches
+async function fetchJsonWithRetry(urlStr: string, retries = 3, delayMs = 600): Promise<any> {
+  let lastErr: any;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fetchJsonSecurely(urlStr);
+    } catch (err: any) {
+      lastErr = err;
+      if (attempt < retries) {
+        console.warn(`[CBF API] Tentativa ${attempt} para ${urlStr} falhou (${err?.message || err}). Aguardando ${delayMs * attempt}ms...`);
+        await new Promise(r => setTimeout(r, delayMs * attempt));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 // Cache variables to avoid rate-limiting and make loads instant
 let cachedScrapedGames: any[] | null = null;
 let lastFetchTime = 0;
@@ -954,10 +971,13 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
 
   while (page <= lastPage && page <= maxPages) {
     try {
+      if (page > 1) {
+        await new Promise(r => setTimeout(r, 120)); // Gentle throttling between requests to prevent HTTP 502
+      }
       console.log(`Buscando dados da API da CBF - Página ${page}...`);
       const url = `https://www.cbf.com.br/api/cbf/onde-assistir/jogos?page=${page}&dataInicio=${startDateStr}&dataTermino=${endDateStr}`;
       
-      const result = await fetchJsonSecurely(url);
+      const result = await fetchJsonWithRetry(url, 3, 500);
       const meta = result.meta || {};
       lastPage = typeof meta.last_page === 'number' ? meta.last_page : 1;
 
@@ -1062,16 +1082,22 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
 
       page++;
     } catch (err) {
-      console.error(`Erro na busca da página ${page} da API da CBF:`, err);
+      console.warn(`Aviso: Falha ao carregar a página ${page} da API da CBF após tentativas. Mantendo ${scrapedGames.length} partidas já recuperadas.`);
       break;
     }
   }
 
   console.log(`Total de jogos mapeados da API da CBF: ${scrapedGames.length}`);
   
-  // Update cache
-  cachedScrapedGames = scrapedGames;
-  lastFetchTime = Date.now();
+  if (scrapedGames.length === 0 && cachedScrapedGames && cachedScrapedGames.length > 0) {
+    console.log('Raspagem retornou 0 jogos. Utilizando cache do servidor...');
+    return cachedScrapedGames;
+  }
+
+  if (scrapedGames.length > 0) {
+    cachedScrapedGames = scrapedGames;
+    lastFetchTime = Date.now();
+  }
   
   return scrapedGames;
 }
