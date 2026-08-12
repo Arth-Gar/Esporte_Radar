@@ -658,7 +658,13 @@ export default function App() {
             <Info className="h-10 w-10 text-seagreen mx-auto" />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Nenhum Evento Encontrado</h3>
             <p className="text-xs text-green-400/80 leading-relaxed">
-              Não existem transmissões agendadas nesta modalidade para a data ou filtros selecionados. Selecione outro dia no calendário ou resete os filtros.
+              Não existem transmissões agendadas nesta modalidade para {
+                selectedDay === 'Tudo'
+                  ? 'a data ou filtros selecionados'
+                  : selectedDay === currentDayNumber
+                  ? 'hoje'
+                  : `dia ${String(selectedDay).padStart(2, '0')}/${String(currentMonthIndex + 1).padStart(2, '0')}`
+              }. Selecione outro dia no calendário ou resete os filtros.
             </p>
             <button
               onClick={() => {
