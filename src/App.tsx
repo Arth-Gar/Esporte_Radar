@@ -25,6 +25,7 @@ import { FootballMatch, SportType } from './types';
 import { AdSlot, useAnchorAd } from './components/AdSlot';
 import { SocialProjectsView } from './components/SocialProjectsView';
 import { InstallPwaPrompt } from './components/InstallPwaPrompt';
+import { Preloader } from './components/Preloader';
 import { SOCIAL_PROJECTS } from './data/socialProjects';
 
 const SPORTS_LIST: { id: SportType; label: string; icon: string }[] = [
@@ -79,6 +80,9 @@ export default function App() {
     }
   }, [selectedDay]);
 
+  // Option to include finalized matches (excluídos por padrão)
+  const [includeFinished, setIncludeFinished] = useState(false);
+
   // Selected Match for the Live Hub Modal
   const [selectedMatch, setSelectedMatch] = useState<FootballMatch | null>(null);
 
@@ -86,6 +90,8 @@ export default function App() {
   const fetchGames = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
+
+    const startTime = Date.now();
 
     try {
       const response = await fetch(`/api/jogos${isRefresh ? '?refresh=true' : ''}`);
@@ -103,8 +109,14 @@ export default function App() {
     } catch (error) {
       console.warn('Conexão instável ao buscar transmissões. Mantendo lista atual:', error);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      const elapsedTime = Date.now() - startTime;
+      const minDuration = 1500; // Animação de pré-carregamento bonita de 1.5 segundos
+      const remainingTime = Math.max(0, minDuration - elapsedTime);
+
+      setTimeout(() => {
+        setLoading(false);
+        setRefreshing(false);
+      }, remainingTime);
     }
   };
 
@@ -152,13 +164,27 @@ export default function App() {
     // Broadcaster filter
     const matchesBroadcaster = selectedBroadcaster === 'Tudo' || match.broadcasters.includes(selectedBroadcaster);
 
-    // Status filter
-    const matchesStatus = selectedStatus === 'Tudo' || match.status === selectedStatus;
+    // Status filter (finalizados são segundo plano, excluídos por padrão)
+    let matchesStatus = false;
+    if (selectedStatus === 'Tudo') {
+      matchesStatus = includeFinished ? true : match.status !== 'finalizado';
+    } else {
+      matchesStatus = match.status === selectedStatus;
+    }
 
     // Day of Month filter
     const matchesDay = selectedDay === 'Tudo' || matchDay === selectedDay;
 
     return matchesSearch && matchesDivision && matchesBroadcaster && matchesStatus && matchesDay;
+  });
+
+  // Ordenar: Ao Vivo (1º), Agendados (2º), Finalizados no final (3º)
+  const sortedMatches = [...filteredMatches].sort((a, b) => {
+    const statusPriority = { ao_vivo: 1, agendado: 2, finalizado: 3 };
+    const prioA = statusPriority[a.status] || 2;
+    const prioB = statusPriority[b.status] || 2;
+    if (prioA !== prioB) return prioA - prioB;
+    return a.date.localeCompare(b.date) || a.time.localeCompare(b.time);
   });
 
   // Calculate stats for active sport
@@ -235,6 +261,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#020704] text-slate-100 font-sans flex flex-col overflow-x-hidden selection:bg-yellow-400 selection:text-[#020704]">
       
+      {/* FULLSCREEN PRELOADER (1.5s) */}
+      <Preloader isLoading={loading} />
+
       {/* HEADER SECTION */}
       <header className="bg-[#05140d] border-b border-green-950/80 py-5 px-6 md:px-8 shrink-0 shadow-lg">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
@@ -472,7 +501,24 @@ export default function App() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 self-end lg:self-auto">
+                  <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto">
+                    <button 
+                      type="button"
+                      onClick={() => setIncludeFinished(!includeFinished)}
+                      className={`px-3 py-2 rounded text-xs font-bold transition-all uppercase tracking-wider flex items-center gap-2 border cursor-pointer ${
+                        includeFinished
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/80 shadow-sm'
+                          : 'bg-[#092215] text-slate-400 border-green-900/30 hover:text-white'
+                      }`}
+                      title="Partidas finalizadas ficam ocultas por padrão e aparecem em segundo plano"
+                    >
+                      <span className={`w-2 h-2 rounded-full ${includeFinished ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></span>
+                      <span>{includeFinished ? 'Ocultar Finalizados' : 'Incluir Finalizados'}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-950 font-mono text-green-400">
+                        {finishedCount}
+                      </span>
+                    </button>
+
                     <button 
                       onClick={() => {
                         setSearchTerm('');
@@ -480,6 +526,7 @@ export default function App() {
                         setSelectedBroadcaster('Tudo');
                         setSelectedStatus('Tudo');
                         setSelectedDay('Tudo');
+                        setIncludeFinished(false);
                       }}
                       className="px-4 py-2 bg-green-900 text-green-300 text-xs font-bold rounded hover:bg-green-800 hover:text-white transition-all uppercase tracking-wider cursor-pointer"
                     >
@@ -591,7 +638,7 @@ export default function App() {
           <div className="hidden sm:block text-green-950">•</div>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-300"></span>
-            <span>CONCLUÍDOS: <strong className="text-green-300 font-sans">{finishedCount}</strong></span>
+            <span>FINALIZADOS: <strong className="text-green-300 font-sans">{finishedCount}</strong></span>
           </div>
         </section>
 
@@ -606,7 +653,7 @@ export default function App() {
             </div>
             <p className="text-xs text-green-400 font-mono tracking-widest uppercase animate-pulse">Carregando transmissões do Esporte Radar...</p>
           </div>
-        ) : filteredMatches.length === 0 ? (
+        ) : sortedMatches.length === 0 ? (
           <div className="p-12 text-center rounded-lg bg-[#05140d] border border-green-950/60 space-y-4 max-w-lg mx-auto shadow-xl">
             <Info className="h-10 w-10 text-seagreen mx-auto" />
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Nenhum Evento Encontrado</h3>
@@ -620,6 +667,7 @@ export default function App() {
                 setSelectedBroadcaster('Tudo');
                 setSelectedStatus('Tudo');
                 setSelectedDay('Tudo');
+                setIncludeFinished(false);
               }}
               className="px-4 py-2 bg-seagreen text-white text-xs font-bold rounded hover:bg-seagreen-solid hover:text-black transition-all cursor-pointer uppercase tracking-wider"
             >
@@ -642,12 +690,12 @@ export default function App() {
             {/* List entries */}
             <div className="grid grid-cols-1 gap-3">
               <AnimatePresence mode="popLayout">
-                {filteredMatches.flatMap((match, idx) => {
+                {sortedMatches.flatMap((match, idx) => {
                   const dateInfo = formatBrazilianDate(match.date);
                   const isLive = match.status === 'ao_vivo';
                   const isFinished = match.status === 'finalizado';
 
-                  const showMiddleAd = idx === Math.floor(filteredMatches.length / 2) && filteredMatches.length > 2;
+                  const showMiddleAd = idx === Math.floor(sortedMatches.length / 2) && sortedMatches.length > 2;
 
                   const isFirst = idx === 0;
 
