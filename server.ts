@@ -1056,6 +1056,26 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
           const homeLogo = game.mandante?.url_escudo || homeInfo.logo;
           const awayLogo = game.visitante?.url_escudo || awayInfo.logo;
 
+          // Determinar status dinâmico com base na data/hora do jogo
+          let matchStatus: 'agendado' | 'ao_vivo' | 'finalizado' = 'agendado';
+          try {
+            const [mYear, mMonth, mDay] = formattedDate.split('-').map(Number);
+            const [mHour, mMin] = timeVal.split(':').map(Number);
+            const matchDateTime = new Date(mYear, mMonth - 1, mDay, mHour || 0, mMin || 0);
+            const diffMs = now.getTime() - matchDateTime.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+
+            if (diffHours >= 2.5) {
+              matchStatus = 'finalizado';
+            } else if (diffHours >= 0 && diffHours < 2.5) {
+              matchStatus = 'ao_vivo';
+            } else {
+              matchStatus = 'agendado';
+            }
+          } catch (e) {
+            matchStatus = 'agendado';
+          }
+
           scrapedGames.push({
             id: `api-cbf-${game.id_jogo || Math.random().toString(36).substring(2, 9)}`,
             sport: 'futebol',
@@ -1072,7 +1092,7 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
             broadcasters: broadcasters.length > 0 ? broadcasters : ['A definir'],
             transmissionUrl: transmissionUrl,
             round: roundText,
-            status: 'agendado',
+            status: matchStatus,
             scraped: true
           });
         } catch (innerErr) {

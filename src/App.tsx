@@ -85,6 +85,7 @@ export default function App() {
 
   // Selected Match for the Live Hub Modal
   const [selectedMatch, setSelectedMatch] = useState<FootballMatch | null>(null);
+  const [showMatchModalHelp, setShowMatchModalHelp] = useState(false);
 
   // Fetch games from Express API
   const fetchGames = async (isRefresh = false) => {
@@ -100,7 +101,31 @@ export default function App() {
       }
       const result = await response.json();
       if (result && result.success && Array.isArray(result.data)) {
-        setMatches(result.data);
+        // Enriquecer e validar o status em tempo real com base no relógio do usuário
+        const nowTime = new Date().getTime();
+        const enrichedData = result.data.map((m: FootballMatch) => {
+          if (m.date && m.time) {
+            try {
+              const [yr, mo, dy] = m.date.split('-').map(Number);
+              const [hr, mn] = m.time.split(':').map(Number);
+              const matchMs = new Date(yr, mo - 1, dy, hr || 0, mn || 0).getTime();
+              const diffHours = (nowTime - matchMs) / (1000 * 60 * 60);
+              
+              if (diffHours >= 2.5) {
+                return { ...m, status: 'finalizado' as const };
+              } else if (diffHours >= 0 && diffHours < 2.5) {
+                return { ...m, status: 'ao_vivo' as const };
+              } else {
+                return { ...m, status: 'agendado' as const };
+              }
+            } catch (e) {
+              return m;
+            }
+          }
+          return m;
+        });
+
+        setMatches(enrichedData);
         setScrapeInfo({
           scrapedCount: result.info?.scrapedCount || result.info?.futebolCount || 0,
           fallbackCount: result.info?.fallbackCount || 0
@@ -890,20 +915,25 @@ export default function App() {
         )}
       </main>
 
-      {/* FOOTER INFO */}
-      <footer className="bg-[#010402] border-t border-green-950/80 py-6 px-6 md:px-8 text-[10px] text-green-700 uppercase tracking-widest shrink-0 mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* FOOTER INFO & DISCLAIMER */}
+      <footer className="bg-[#010402] border-t border-green-950/80 py-6 px-6 md:px-8 text-[10px] text-green-700 shrink-0 mt-auto space-y-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 uppercase tracking-widest">
           <div className="flex flex-wrap justify-center md:justify-start gap-6">
-            <span>© 2026 Confederação Brasileira de Futebol</span>
+            <span>© 2026 Esporte Radar • Guia de Transmissões</span>
             <span className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-              Sincronização Ativa
+              Sincronização Oficial CBF
             </span>
-            <span>Estádios e horários oficiais padrão de Brasília</span>
+            <span>Horários padrão de Brasília (DF)</span>
           </div>
           <div className="text-center md:text-right font-mono text-[9px]">
             Exibindo {filteredMatches.length} de {matches.length} transmissões do mês
           </div>
+        </div>
+
+        {/* Legal Disclaimer */}
+        <div className="max-w-7xl mx-auto pt-3 border-t border-green-950/40 text-[10px] text-green-600/75 leading-relaxed font-normal normal-case text-center md:text-left">
+          <strong className="text-green-500 font-semibold">Aviso Legal & Transparência:</strong> O Esporte Radar atua estritamente como um guia informativo de transmissões esportivas. As datas, horários, estádios e canais de exibição são baseados nas divulgações públicas oficiais da CBF e das emissoras detentoras dos direitos, estando sujeitos a eventuais atrasos, remarcações ou cancelamentos sem aviso prévio. A plataforma não se responsabiliza por alterações de última hora efetuadas pelos organizadores.
         </div>
       </footer>
 
@@ -921,18 +951,73 @@ export default function App() {
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="relative w-full max-w-xl bg-[#05140d] border border-green-950/60 rounded-lg overflow-hidden shadow-2xl"
+              className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-[#05140d] border border-green-950/60 rounded-lg shadow-2xl custom-scrollbar"
             >
-              {/* Close Icon */}
-              <button 
-                onClick={() => setSelectedMatch(null)}
-                className="absolute top-4 right-4 p-2 rounded-full bg-[#020704]/60 text-green-400 hover:text-white transition-all cursor-pointer z-10"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {/* Action buttons (Close 'X' and Info 'i' below it) */}
+              <div className="absolute top-4 right-4 flex flex-col items-center gap-2 z-20">
+                <button 
+                  onClick={() => {
+                    setSelectedMatch(null);
+                    setShowMatchModalHelp(false);
+                  }}
+                  aria-label="Fechar detalhes da partida"
+                  title="Fechar janela"
+                  className="p-2 rounded-full bg-[#020704]/90 text-green-400 hover:text-white hover:bg-green-950 border border-green-950/80 transition-all cursor-pointer shadow-lg"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+
+                <button 
+                  onClick={() => setShowMatchModalHelp(prev => !prev)}
+                  aria-label="Instruções e ajuda sobre a partida"
+                  aria-expanded={showMatchModalHelp}
+                  title="Instruções e informações da partida"
+                  className={`p-2 rounded-full border transition-all cursor-pointer shadow-lg ${
+                    showMatchModalHelp
+                      ? 'bg-seagreen text-white font-bold border-seagreen ring-2 ring-seagreen/30'
+                      : 'bg-[#020704]/90 text-green-300 hover:text-white hover:bg-green-950 border-green-950/80'
+                  }`}
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </div>
 
               {/* Header card info */}
               <div className="bg-[#020704] p-6 text-center border-b border-green-950/60 space-y-4">
+                
+                {/* Accessible Instructions Drawer when 'i' is clicked */}
+                <AnimatePresence>
+                  {showMatchModalHelp && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden mb-4 text-left"
+                    >
+                      <div className="p-4 rounded-lg bg-[#072417] border border-green-700/50 text-green-200 text-xs space-y-2.5 shadow-inner">
+                        <div className="flex items-center justify-between font-bold text-sm text-white">
+                          <span className="flex items-center gap-2">
+                            <Info className="h-4 w-4 text-seagreen" />
+                            Guia de Informações da Partida
+                          </span>
+                          <button
+                            onClick={() => setShowMatchModalHelp(false)}
+                            className="text-[10px] text-green-400 hover:text-white uppercase tracking-wider underline cursor-pointer"
+                          >
+                            Ocultar
+                          </button>
+                        </div>
+                        <ul className="space-y-1.5 text-[11px] text-green-200/90 leading-relaxed list-disc list-inside">
+                          <li><strong>Time da Casa:</strong> O time exibido à esquerda é o mandante (quem está sediando o jogo) no estádio indicado.</li>
+                          <li><strong>Horário:</strong> Todos os horários seguem rigorosamente o fuso oficial de <em>Brasília (GMT-3)</em>.</li>
+                          <li><strong>Onde Assistir:</strong> Clique em qualquer um dos canais listados abaixo para abrir diretamente o portal oficial de streaming ou transmissão.</li>
+                          <li><strong>Status do Jogo:</strong> Indicado entre <em>Agendado</em>, <em>Ao Vivo</em> (durante a partida) ou <em>Finalizado</em>.</li>
+                          <li><strong>Aviso de Transparência:</strong> Informamos dados públicos divulgados pela CBF e emissoras. Não nos responsabilizamos por eventuais alterações de datas, horários ou cancelamentos de última hora.</li>
+                        </ul>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 
                 <div className="flex items-center justify-center gap-2">
                   <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${getDivisionStyle(selectedMatch.division)}`}>
