@@ -68,7 +68,7 @@ export default function App() {
   const [selectedDivision, setSelectedDivision] = useState<string>('Tudo');
   const [selectedBroadcaster, setSelectedBroadcaster] = useState<string>('Tudo');
   const [selectedStatus, setSelectedStatus] = useState<'Tudo' | 'ao_vivo' | 'agendado' | 'finalizado'>('Tudo');
-  const [selectedDay, setSelectedDay] = useState<number | 'Tudo'>(currentDayNumber);
+  const [selectedDay, setSelectedDay] = useState<number | 'Tudo'>('Tudo');
   const [showFilters, setShowFilters] = useState(false);
 
   // Ref for auto-scrolling calendar to today
@@ -178,8 +178,21 @@ export default function App() {
     return matchesSearch && matchesDivision && matchesBroadcaster && matchesStatus && matchesDay;
   });
 
-  // Ordenar: Ao Vivo (1º), Agendados (2º), Finalizados no final (3º)
+  // Ordenar: Jogos da Série A primeiro, depois status: Ao Vivo (1º), Agendados (2º), Finalizados no final (3º), data e horário
   const sortedMatches = [...filteredMatches].sort((a, b) => {
+    const isSerieA = (div: string) => {
+      const d = (div || '').toLowerCase();
+      return d.includes('série a') || d.includes('serie a');
+    };
+
+    const isASerieA = isSerieA(a.division);
+    const isBSerieA = isSerieA(b.division);
+
+    // Prioridade máxima: jogos da Série A
+    if (isASerieA !== isBSerieA) {
+      return isASerieA ? -1 : 1;
+    }
+
     const statusPriority = { ao_vivo: 1, agendado: 2, finalizado: 3 };
     const prioA = statusPriority[a.status] || 2;
     const prioB = statusPriority[b.status] || 2;
