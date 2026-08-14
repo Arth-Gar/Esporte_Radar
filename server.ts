@@ -249,92 +249,169 @@ function verifyAdmin(req: express.Request, res: express.Response, next: express.
   next();
 }
 
-// Club names to UOL content stable image URLs
+// Club names to high-resolution official crest URLs
 const CLUB_MAPPING: { [key: string]: { name: string; slug: string; logo: string } } = {
-  'flamengo': { name: 'Flamengo', slug: 'flamengo', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/flamengo.png' },
-  'palmeiras': { name: 'Palmeiras', slug: 'palmeiras', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/palmeiras.png' },
-  'são paulo': { name: 'São Paulo', slug: 'sao-paulo', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/sao-paulo.png' },
-  'sao paulo': { name: 'São Paulo', slug: 'sao-paulo', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/sao-paulo.png' },
-  'corinthians': { name: 'Corinthians', slug: 'corinthians', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/corinthians.png' },
-  'grêmio': { name: 'Grêmio', slug: 'gremio', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/gremio.png' },
-  'gremio': { name: 'Grêmio', slug: 'gremio', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/gremio.png' },
-  'internacional': { name: 'Internacional', slug: 'internacional', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/internacional.png' },
-  'atlético mineiro': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/atletico-mg.png' },
-  'atlético-mg': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/atletico-mg.png' },
-  'atletico-mg': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/atletico-mg.png' },
-  'atletico mg': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/atletico-mg.png' },
-  'cruzeiro': { name: 'Cruzeiro', slug: 'cruzeiro', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/cruzeiro.png' },
-  'fluminense': { name: 'Fluminense', slug: 'fluminense', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/fluminense.png' },
-  'botafogo': { name: 'Botafogo', slug: 'botafogo', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/botafogo.png' },
-  'vasco da gama': { name: 'Vasco da Gama', slug: 'vasco', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/vasco.png' },
-  'vasco': { name: 'Vasco da Gama', slug: 'vasco', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/vasco.png' },
-  'athletico': { name: 'Athletico-PR', slug: 'athletico-pr', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/athletico-pr.png' },
-  'athletico-pr': { name: 'Athletico-PR', slug: 'athletico-pr', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/athletico-pr.png' },
-  'athletico pr': { name: 'Athletico-PR', slug: 'athletico-pr', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/athletico-pr.png' },
-  'bahia': { name: 'Bahia', slug: 'bahia', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/bahia.png' },
-  'fortaleza': { name: 'Fortaleza', slug: 'fortaleza', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/fortaleza.png' },
-  'cuiabá': { name: 'Cuiabá', slug: 'cuiaba', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/cuiaba.png' },
-  'cuiaba': { name: 'Cuiabá', slug: 'cuiaba', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/cuiaba.png' },
-  'criciúma': { name: 'Criciúma', slug: 'criciuma', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/criciuma.png' },
-  'criciuma': { name: 'Criciúma', slug: 'criciuma', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/criciuma.png' },
-  'vitória': { name: 'Vitória', slug: 'vitoria', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/vitoria.png' },
-  'vitoria': { name: 'Vitória', slug: 'vitoria', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/vitoria.png' },
-  'juventude': { name: 'Juventude', slug: 'juventude', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/juventude.png' },
-  'atlético-go': { name: 'Atlético-GO', slug: 'atletico-go', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/atletico-go.png' },
-  'atletico-go': { name: 'Atlético-GO', slug: 'atletico-go', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/atletico-go.png' },
-  'atletico go': { name: 'Atlético-GO', slug: 'atletico-go', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/atletico-go.png' },
-  'bragantino': { name: 'Red Bull Bragantino', slug: 'bragantino', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/bragantino.png' },
-  'red bull bragantino': { name: 'Red Bull Bragantino', slug: 'bragantino', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/bragantino.png' },
+  // Brasileirão Série A (CBF official crests matching Futebol tab exactly)
+  'flamengo': { name: 'Flamengo', slug: 'flamengo', logo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg' },
+  'palmeiras': { name: 'Palmeiras', slug: 'palmeiras', logo: 'https://conteudo.cbf.com.br/clubes/20002/escudo.jpg' },
+  'são paulo': { name: 'São Paulo', slug: 'sao-paulo', logo: 'https://conteudo.cbf.com.br/clubes/20005/escudo.jpg' },
+  'sao paulo': { name: 'São Paulo', slug: 'sao-paulo', logo: 'https://conteudo.cbf.com.br/clubes/20005/escudo.jpg' },
+  'corinthians': { name: 'Corinthians', slug: 'corinthians', logo: 'https://conteudo.cbf.com.br/clubes/20001/escudo.jpg' },
+  'grêmio': { name: 'Grêmio', slug: 'gremio', logo: 'https://conteudo.cbf.com.br/clubes/20013/escudo.jpg' },
+  'gremio': { name: 'Grêmio', slug: 'gremio', logo: 'https://conteudo.cbf.com.br/clubes/20013/escudo.jpg' },
+  'internacional': { name: 'Internacional', slug: 'internacional', logo: 'https://conteudo.cbf.com.br/clubes/20011/escudo.jpg' },
+  'inter': { name: 'Internacional', slug: 'internacional', logo: 'https://conteudo.cbf.com.br/clubes/20011/escudo.jpg' },
+  'atlético mineiro': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.cbf.com.br/clubes/62194/escudo.jpg' },
+  'atlético-mg': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.cbf.com.br/clubes/62194/escudo.jpg' },
+  'atletico-mg': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.cbf.com.br/clubes/62194/escudo.jpg' },
+  'atletico mg': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.cbf.com.br/clubes/62194/escudo.jpg' },
+  'galo': { name: 'Atlético-MG', slug: 'atletico-mg', logo: 'https://conteudo.cbf.com.br/clubes/62194/escudo.jpg' },
+  'cruzeiro': { name: 'Cruzeiro', slug: 'cruzeiro', logo: 'https://conteudo.cbf.com.br/clubes/59849/escudo.jpg' },
+  'fluminense': { name: 'Fluminense', slug: 'fluminense', logo: 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg' },
+  'flu': { name: 'Fluminense', slug: 'fluminense', logo: 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg' },
+  'botafogo': { name: 'Botafogo', slug: 'botafogo', logo: 'https://conteudo.cbf.com.br/clubes/56654/escudo.jpg' },
+  'fogao': { name: 'Botafogo', slug: 'botafogo', logo: 'https://conteudo.cbf.com.br/clubes/56654/escudo.jpg' },
+  'vasco da gama': { name: 'Vasco da Gama', slug: 'vasco', logo: 'https://conteudo.cbf.com.br/clubes/60646/escudo.jpg' },
+  'vasco': { name: 'Vasco da Gama', slug: 'vasco', logo: 'https://conteudo.cbf.com.br/clubes/60646/escudo.jpg' },
+  'athletico': { name: 'Athletico-PR', slug: 'athletico-pr', logo: 'https://conteudo.cbf.com.br/clubes/20052/escudo.jpg' },
+  'athletico-pr': { name: 'Athletico-PR', slug: 'athletico-pr', logo: 'https://conteudo.cbf.com.br/clubes/20052/escudo.jpg' },
+  'athletico pr': { name: 'Athletico-PR', slug: 'athletico-pr', logo: 'https://conteudo.cbf.com.br/clubes/20052/escudo.jpg' },
+  'furacao': { name: 'Athletico-PR', slug: 'athletico-pr', logo: 'https://conteudo.cbf.com.br/clubes/20052/escudo.jpg' },
+  'bahia': { name: 'Bahia', slug: 'bahia', logo: 'https://conteudo.cbf.com.br/clubes/61377/escudo.jpg' },
+  'fortaleza': { name: 'Fortaleza', slug: 'fortaleza', logo: 'https://conteudo.cbf.com.br/clubes/63238/escudo.jpg' },
+  'cuiabá': { name: 'Cuiabá', slug: 'cuiaba', logo: 'https://conteudo.cbf.com.br/clubes/20800/escudo.jpg' },
+  'cuiaba': { name: 'Cuiabá', slug: 'cuiaba', logo: 'https://conteudo.cbf.com.br/clubes/20800/escudo.jpg' },
+  'criciúma': { name: 'Criciúma', slug: 'criciuma', logo: 'https://conteudo.cbf.com.br/clubes/20019/escudo.jpg' },
+  'criciuma': { name: 'Criciúma', slug: 'criciuma', logo: 'https://conteudo.cbf.com.br/clubes/20019/escudo.jpg' },
+  'vitória': { name: 'Vitória', slug: 'vitoria', logo: 'https://conteudo.cbf.com.br/clubes/20018/escudo.jpg' },
+  'vitoria': { name: 'Vitória', slug: 'vitoria', logo: 'https://conteudo.cbf.com.br/clubes/20018/escudo.jpg' },
+  'juventude': { name: 'Juventude', slug: 'juventude', logo: 'https://conteudo.cbf.com.br/clubes/20027/escudo.jpg' },
+  'atlético-go': { name: 'Atlético-GO', slug: 'atletico-go', logo: 'https://conteudo.cbf.com.br/clubes/62261/escudo.jpg' },
+  'atletico-go': { name: 'Atlético-GO', slug: 'atletico-go', logo: 'https://conteudo.cbf.com.br/clubes/62261/escudo.jpg' },
+  'atletico go': { name: 'Atlético-GO', slug: 'atletico-go', logo: 'https://conteudo.cbf.com.br/clubes/62261/escudo.jpg' },
+  'bragantino': { name: 'Red Bull Bragantino', slug: 'bragantino', logo: 'https://conteudo.cbf.com.br/clubes/20007/escudo.jpg' },
+  'red bull bragantino': { name: 'Red Bull Bragantino', slug: 'bragantino', logo: 'https://conteudo.cbf.com.br/clubes/20007/escudo.jpg' },
   
-  // Serie B
-  'santos': { name: 'Santos', slug: 'santos', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/santos.png' },
-  'sport': { name: 'Sport Recife', slug: 'sport', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/sport.png' },
-  'sport recife': { name: 'Sport Recife', slug: 'sport', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/sport.png' },
-  'américa-mg': { name: 'América-MG', slug: 'america-mg', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/america-mg.png' },
-  'america-mg': { name: 'América-MG', slug: 'america-mg', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/america-mg.png' },
-  'coritiba': { name: 'Coritiba', slug: 'coritiba', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/coritiba.png' },
-  'goiás': { name: 'Goiás', slug: 'goias', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/goias.png' },
-  'goias': { name: 'Goiás', slug: 'goias', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/goias.png' },
-  'ceará': { name: 'Ceará', slug: 'ceara', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/ceara.png' },
-  'ceara': { name: 'Ceará', slug: 'ceara', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/ceara.png' },
-  'ponte preta': { name: 'Ponte Preta', slug: 'ponte-preta', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/ponte-preta.png' },
-  'guarani': { name: 'Guarani', slug: 'guarani', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/guarani.png' },
-  'chapecoense': { name: 'Chapecoense', slug: 'chapecoense', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/chapecoense.png' },
-  'novorizontino': { name: 'Novorizontino', slug: 'novorizontino', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/novorizontino.png' },
-  'mirassol': { name: 'Mirassol', slug: 'mirassol', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/mirassol.png' },
-  'vila nova': { name: 'Vila Nova', slug: 'vila-nova', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/vila-nova.png' },
-  'operário-pr': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/operario.png' },
-  'operario-pr': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/operario.png' },
-  'operário': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/operario.png' },
-  'operario': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/operario.png' },
-  'crb': { name: 'CRB', slug: 'crb', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/crb.png' },
-  'paysandu': { name: 'Paysandu', slug: 'paysandu', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/paysandu.png' },
-  'ituano': { name: 'Ituano', slug: 'ituano', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/ituano.png' },
-  'brusque': { name: 'Brusque', slug: 'brusque', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/brusque.png' },
-  'amazonas': { name: 'Amazonas FC', slug: 'amazonas', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/amazonas.png' },
-  'botafogo-sp': { name: 'Botafogo-SP', slug: 'botafogo-sp', logo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/botafogo-sp.png' }
+  // Brasileirão Série B
+  'santos': { name: 'Santos', slug: 'santos', logo: 'https://conteudo.cbf.com.br/clubes/20008/escudo.jpg' },
+  'peixe': { name: 'Santos', slug: 'santos', logo: 'https://conteudo.cbf.com.br/clubes/20008/escudo.jpg' },
+  'sport': { name: 'Sport Recife', slug: 'sport', logo: 'https://conteudo.cbf.com.br/clubes/20010/escudo.jpg' },
+  'sport recife': { name: 'Sport Recife', slug: 'sport', logo: 'https://conteudo.cbf.com.br/clubes/20010/escudo.jpg' },
+  'leao da ilha': { name: 'Sport Recife', slug: 'sport', logo: 'https://conteudo.cbf.com.br/clubes/20010/escudo.jpg' },
+  'américa-mg': { name: 'América-MG', slug: 'america-mg', logo: 'https://conteudo.cbf.com.br/clubes/59897/escudo.jpg' },
+  'america-mg': { name: 'América-MG', slug: 'america-mg', logo: 'https://conteudo.cbf.com.br/clubes/59897/escudo.jpg' },
+  'coelho': { name: 'América-MG', slug: 'america-mg', logo: 'https://conteudo.cbf.com.br/clubes/59897/escudo.jpg' },
+  'coritiba': { name: 'Coritiba', slug: 'coritiba', logo: 'https://conteudo.cbf.com.br/clubes/61590/escudo.jpg' },
+  'coxa': { name: 'Coritiba', slug: 'coritiba', logo: 'https://conteudo.cbf.com.br/clubes/61590/escudo.jpg' },
+  'goiás': { name: 'Goiás', slug: 'goias', logo: 'https://conteudo.cbf.com.br/clubes/20028/escudo.jpg' },
+  'goias': { name: 'Goiás', slug: 'goias', logo: 'https://conteudo.cbf.com.br/clubes/20028/escudo.jpg' },
+  'ceará': { name: 'Ceará', slug: 'ceara', logo: 'https://conteudo.cbf.com.br/clubes/20031/escudo.jpg' },
+  'ceara': { name: 'Ceará', slug: 'ceara', logo: 'https://conteudo.cbf.com.br/clubes/20031/escudo.jpg' },
+  'vozao': { name: 'Ceará', slug: 'ceara', logo: 'https://conteudo.cbf.com.br/clubes/20031/escudo.jpg' },
+  'ponte preta': { name: 'Ponte Preta', slug: 'ponte-preta', logo: 'https://conteudo.cbf.com.br/clubes/20037/escudo.jpg' },
+  'macaca': { name: 'Ponte Preta', slug: 'ponte-preta', logo: 'https://conteudo.cbf.com.br/clubes/20037/escudo.jpg' },
+  'guarani': { name: 'Guarani', slug: 'guarani', logo: 'https://conteudo.cbf.com.br/clubes/20024/escudo.jpg' },
+  'bugre': { name: 'Guarani', slug: 'guarani', logo: 'https://conteudo.cbf.com.br/clubes/20024/escudo.jpg' },
+  'chapecoense': { name: 'Chapecoense', slug: 'chapecoense', logo: 'https://conteudo.cbf.com.br/clubes/20086/escudo.jpg' },
+  'chape': { name: 'Chapecoense', slug: 'chapecoense', logo: 'https://conteudo.cbf.com.br/clubes/20086/escudo.jpg' },
+  'novorizontino': { name: 'Novorizontino', slug: 'novorizontino', logo: 'https://conteudo.cbf.com.br/clubes/31514/escudo.jpg' },
+  'mirassol': { name: 'Mirassol', slug: 'mirassol', logo: 'https://conteudo.cbf.com.br/clubes/20385/escudo.jpg' },
+  'vila nova': { name: 'Vila Nova', slug: 'vila-nova', logo: 'https://conteudo.cbf.com.br/clubes/20079/escudo.jpg' },
+  'operário-pr': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.cbf.com.br/clubes/20106/escudo.jpg' },
+  'operario-pr': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.cbf.com.br/clubes/20106/escudo.jpg' },
+  'operário': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.cbf.com.br/clubes/20106/escudo.jpg' },
+  'operario': { name: 'Operário-PR', slug: 'operario-pr', logo: 'https://conteudo.cbf.com.br/clubes/20106/escudo.jpg' },
+  'crb': { name: 'CRB', slug: 'crb', logo: 'https://conteudo.cbf.com.br/clubes/20032/escudo.jpg' },
+  'paysandu': { name: 'Paysandu', slug: 'paysandu', logo: 'https://conteudo.cbf.com.br/clubes/20017/escudo.jpg' },
+  'papao': { name: 'Paysandu', slug: 'paysandu', logo: 'https://conteudo.cbf.com.br/clubes/20017/escudo.jpg' },
+  'ituano': { name: 'Ituano', slug: 'ituano', logo: 'https://conteudo.cbf.com.br/clubes/64742/escudo.jpg' },
+  'brusque': { name: 'Brusque', slug: 'brusque', logo: 'https://conteudo.cbf.com.br/clubes/63843/escudo.jpg' },
+  'amazonas': { name: 'Amazonas FC', slug: 'amazonas', logo: 'https://conteudo.cbf.com.br/clubes/64052/escudo.jpg' },
+  'amazonas fc': { name: 'Amazonas FC', slug: 'amazonas', logo: 'https://conteudo.cbf.com.br/clubes/64052/escudo.jpg' },
+  'botafogo-sp': { name: 'Botafogo-SP', slug: 'botafogo-sp', logo: 'https://conteudo.cbf.com.br/clubes/20040/escudo.jpg' },
+
+  // CONMEBOL Libertadores & Sul-Americana Clubs
+  'river plate': { name: 'River Plate', slug: 'river-plate', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10083.png' },
+  'river': { name: 'River Plate', slug: 'river-plate', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10083.png' },
+  'boca juniors': { name: 'Boca Juniors', slug: 'boca-juniors', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' },
+  'boca': { name: 'Boca Juniors', slug: 'boca-juniors', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' },
+  'penarol': { name: 'Peñarol', slug: 'penarol', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10082.png' },
+  'peñarol': { name: 'Peñarol', slug: 'penarol', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10082.png' },
+  'nacional': { name: 'Nacional-URU', slug: 'nacional-uru', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10081.png' },
+  'nacional-uru': { name: 'Nacional-URU', slug: 'nacional-uru', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10081.png' },
+  'olimpia': { name: 'Olimpia', slug: 'olimpia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10080.png' },
+  'club olimpia': { name: 'Olimpia', slug: 'olimpia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10080.png' },
+  'cerro porteño': { name: 'Cerro Porteño', slug: 'cerro-porteno', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10079.png' },
+  'cerro porteno': { name: 'Cerro Porteño', slug: 'cerro-porteno', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10079.png' },
+  'ldu': { name: 'LDU Quito', slug: 'ldu', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10084.png' },
+  'ldu quito': { name: 'LDU Quito', slug: 'ldu', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10084.png' },
+  'liga de quito': { name: 'LDU Quito', slug: 'ldu', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10084.png' },
+  'bolivar': { name: 'Bolívar', slug: 'bolivar', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10085.png' },
+  'bolívar': { name: 'Bolívar', slug: 'bolivar', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10085.png' },
+  'colo-colo': { name: 'Colo-Colo', slug: 'colo-colo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10078.png' },
+  'colo colo': { name: 'Colo-Colo', slug: 'colo-colo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10078.png' },
+  'san lorenzo': { name: 'San Lorenzo', slug: 'san-lorenzo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10086.png' },
+  'racing': { name: 'Racing Club', slug: 'racing', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10087.png' },
+  'racing club': { name: 'Racing Club', slug: 'racing', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10087.png' },
+  'talleres': { name: 'Talleres', slug: 'talleres', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10088.png' },
+  'talleres de cordoba': { name: 'Talleres', slug: 'talleres', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10088.png' },
+  'independiente del valle': { name: 'Independiente del Valle', slug: 'idv', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10089.png' },
+  'idv': { name: 'Independiente del Valle', slug: 'idv', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10089.png' },
+  'libertad': { name: 'Libertad', slug: 'libertad', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10090.png' },
+  'estudiantes': { name: 'Estudiantes de La Plata', slug: 'estudiantes', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10091.png' },
+  'estudiantes de la plata': { name: 'Estudiantes de La Plata', slug: 'estudiantes', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10091.png' },
+  'velez': { name: 'Vélez Sarsfield', slug: 'velez', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10092.png' },
+  'velez sarsfield': { name: 'Vélez Sarsfield', slug: 'velez', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10092.png' },
+  'vélez': { name: 'Vélez Sarsfield', slug: 'velez', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10092.png' },
+  'vélez sarsfield': { name: 'Vélez Sarsfield', slug: 'velez', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10092.png' },
+  'junior': { name: 'Junior Barranquilla', slug: 'junior', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10093.png' },
+  'junior barranquilla': { name: 'Junior Barranquilla', slug: 'junior', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10093.png' },
+  'alianza lima': { name: 'Alianza Lima', slug: 'alianza-lima', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10094.png' },
+  'universitario': { name: 'Universitario', slug: 'universitario', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10095.png' },
+  'the strongest': { name: 'The Strongest', slug: 'the-strongest', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10096.png' },
+  'millonarios': { name: 'Millonarios', slug: 'millonarios', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10097.png' },
+  'barcelona-sc': { name: 'Barcelona SC', slug: 'barcelona-sc', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10098.png' },
+  'barcelona sc': { name: 'Barcelona SC', slug: 'barcelona-sc', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10098.png' },
+  'emelec': { name: 'Emelec', slug: 'emelec', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10099.png' },
+  'atletico nacional': { name: 'Atlético Nacional', slug: 'atletico-nacional', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10100.png' },
+  'atlético nacional': { name: 'Atlético Nacional', slug: 'atletico-nacional', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10100.png' },
+  'santa fe': { name: 'Independiente Santa Fe', slug: 'santa-fe', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10101.png' },
+  'huachipato': { name: 'Huachipato', slug: 'huachipato', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10102.png' },
+  'palestino': { name: 'Palestino', slug: 'palestino', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10103.png' },
+  'cobresal': { name: 'Cobresal', slug: 'cobresal', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10104.png' },
+  'liverpool-uru': { name: 'Liverpool-URU', slug: 'liverpool-uru', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10105.png' },
+  'liverpool': { name: 'Liverpool-URU', slug: 'liverpool-uru', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10105.png' },
+  'caracas': { name: 'Caracas FC', slug: 'caracas', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10106.png' },
+  'caracas fc': { name: 'Caracas FC', slug: 'caracas', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10106.png' },
+  'deportivo tachira': { name: 'Deportivo Táchira', slug: 'deportivo-tachira', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10107.png' },
+  'deportivo táchira': { name: 'Deportivo Táchira', slug: 'deportivo-tachira', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10107.png' },
+  'sporting cristal': { name: 'Sporting Cristal', slug: 'sporting-cristal', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10108.png' },
+  'melgar': { name: 'FBC Melgar', slug: 'melgar', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10109.png' },
+  'always ready': { name: 'Always Ready', slug: 'always-ready', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10110.png' }
 };
 
 // Helper to normalize name and return beautiful details
 function getClubDetails(rawName: string): { name: string; slug: string; logo: string } {
-  const norm = rawName.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const cleanName = (rawName || '').trim();
+  const norm = cleanName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s-]/g, "");
   
   // Exact match lookups
   if (CLUB_MAPPING[norm]) {
     return CLUB_MAPPING[norm];
   }
   
-  // Substring matches
-  for (const [key, value] of Object.entries(CLUB_MAPPING)) {
-    if (norm.includes(key) || key.includes(norm)) {
-      return value;
+  // Try matching known keys sorted by longest key first (so "vasco da gama" matches before "vasco", "atletico-mg" before "atletico")
+  const sortedKeys = Object.keys(CLUB_MAPPING).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    if (key.length >= 4 && (norm === key || norm.startsWith(key + ' ') || norm.endsWith(' ' + key) || norm.includes(' ' + key + ' '))) {
+      return CLUB_MAPPING[key];
     }
   }
 
-  // Fallback to custom built-up details
+  // Fallback to custom built-up details with UOL logo format
   const slug = norm.replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   return {
-    name: rawName.trim(),
+    name: cleanName,
     slug: slug,
     logo: `https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/${slug}.png`
   };
@@ -420,7 +497,7 @@ function generateOtherSportsEvents(): any[] {
       sport: 'basquete',
       homeTeam: 'Flamengo Basquete',
       homeTeamSlug: 'flamengo-basquete',
-      homeTeamLogo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/flamengo.png',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
       awayTeam: 'Sesi Franca',
       awayTeamSlug: 'sesi-franca',
       awayTeamLogo: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=120&auto=format&fit=crop&q=80',
@@ -439,7 +516,7 @@ function generateOtherSportsEvents(): any[] {
       sport: 'basquete',
       homeTeam: 'São Paulo FC',
       homeTeamSlug: 'sao-paulo-basquete',
-      homeTeamLogo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/sao-paulo.png',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20005/escudo.jpg',
       awayTeam: 'Minas Tênis Clube',
       awayTeamSlug: 'minas-basquete',
       awayTeamLogo: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=120&auto=format&fit=crop&q=80',
@@ -536,7 +613,7 @@ function generateOtherSportsEvents(): any[] {
       sport: 'volei',
       homeTeam: 'Sada Cruzeiro',
       homeTeamSlug: 'sada-cruzeiro',
-      homeTeamLogo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/cruzeiro.png',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/59849/escudo.jpg',
       awayTeam: 'Minas Tênis Clube',
       awayTeamSlug: 'minas-volei',
       awayTeamLogo: 'https://images.unsplash.com/photo-1592656094267-764a45160876?w=120&auto=format&fit=crop&q=80',
@@ -863,6 +940,109 @@ function generateOtherSportsEvents(): any[] {
   ];
 }
 
+// Generate curated schedule for CONMEBOL Libertadores 2026 (Mata-mata / Oitavas e Quartas)
+function generateLibertadoresEvents(): any[] {
+  const libList = [
+    {
+      id: 'lib-1',
+      round: 'Oitavas de Final - Ida',
+      home: 'Flamengo',
+      away: 'Olimpia',
+      date: '2026-08-18',
+      time: '21:30',
+      stadium: 'Maracanã - Rio de Janeiro (RJ)',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+']
+    },
+    {
+      id: 'lib-2',
+      round: 'Oitavas de Final - Ida',
+      home: 'River Plate',
+      away: 'Palmeiras',
+      date: '2026-08-19',
+      time: '21:30',
+      stadium: 'Monumental de Núñez - Buenos Aires (ARG)',
+      broadcasters: ['ESPN', 'Disney+', 'Paramount+']
+    },
+    {
+      id: 'lib-3',
+      round: 'Oitavas de Final - Ida',
+      home: 'Botafogo',
+      away: 'Nacional-URU',
+      date: '2026-08-20',
+      time: '19:00',
+      stadium: 'Nilton Santos (Engenhão) - Rio de Janeiro (RJ)',
+      broadcasters: ['Paramount+', 'ESPN', 'Disney+']
+    },
+    {
+      id: 'lib-4',
+      round: 'Oitavas de Final - Ida',
+      home: 'São Paulo',
+      away: 'LDU Quito',
+      date: '2026-08-20',
+      time: '21:30',
+      stadium: 'MorumBIS - São Paulo (SP)',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+']
+    },
+    {
+      id: 'lib-5',
+      round: 'Oitavas de Final - Volta',
+      home: 'Palmeiras',
+      away: 'River Plate',
+      date: '2026-08-26',
+      time: '21:30',
+      stadium: 'Allianz Parque - São Paulo (SP)',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+']
+    },
+    {
+      id: 'lib-6',
+      round: 'Oitavas de Final - Volta',
+      home: 'Olimpia',
+      away: 'Flamengo',
+      date: '2026-08-27',
+      time: '21:30',
+      stadium: 'Defensores del Chaco - Assunção (PAR)',
+      broadcasters: ['ESPN', 'Disney+', 'Paramount+']
+    },
+    {
+      id: 'lib-7',
+      round: 'Oitavas de Final - Volta',
+      home: 'Atlético-MG',
+      away: 'San Lorenzo',
+      date: '2026-08-27',
+      time: '19:00',
+      stadium: 'Arena MRV - Belo Horizonte (MG)',
+      broadcasters: ['Paramount+', 'Disney+']
+    }
+  ];
+
+  return libList.map(item => {
+    const homeInfo = getClubDetails(item.home);
+    const awayInfo = getClubDetails(item.away);
+
+    return {
+      id: item.id,
+      sport: 'libertadores',
+      competition: 'CONMEBOL Libertadores',
+      division: 'Libertadores',
+      round: item.round,
+      homeTeam: homeInfo.name,
+      homeTeamSlug: homeInfo.slug,
+      homeTeamLogo: homeInfo.logo,
+      awayTeam: awayInfo.name,
+      awayTeamSlug: awayInfo.slug,
+      awayTeamLogo: awayInfo.logo,
+      date: item.date,
+      time: item.time,
+      stadium: item.stadium,
+      broadcasters: item.broadcasters,
+      transmissionDetails: getTransmissionDetails(item.broadcasters),
+      transmissionUrl: 'https://gol.conmebol.com/libertadores/pt-br',
+      status: 'agendado',
+      scraped: false
+    };
+  });
+}
+
 // Generate an ultra-comprehensive, beautiful schedule for the current month (July 2026)
 function generateFallbackGames(): any[] {
   // Cleared completely per user's explicit request ("apague todos os dados das partidas")
@@ -1172,15 +1352,21 @@ app.get('/api/jogos', async (req, res) => {
   try {
     const forceRefresh = req.query.refresh === 'true';
     const scrapedCBF = await scrapeCBFGames(forceRefresh);
+    const libertadoresMatches = generateLibertadoresEvents();
     const otherSports = generateOtherSportsEvents();
     const fallback = generateFallbackGames();
     
-    // Combine everything: scraped CBF (futebol), other sports, fallback
+    // Combine everything: scraped CBF (futebol), Libertadores, other sports, fallback
     const rawCombined: any[] = [];
     
     // Add scraped CBF matches
     scrapedCBF.forEach(scrapedGame => {
       rawCombined.push(scrapedGame);
+    });
+
+    // Add CONMEBOL Libertadores matches
+    libertadoresMatches.forEach(libGame => {
+      rawCombined.push(libGame);
     });
 
     // Add other sports matches

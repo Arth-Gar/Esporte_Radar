@@ -28,8 +28,9 @@ import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { Preloader } from './components/Preloader';
 import { SOCIAL_PROJECTS } from './data/socialProjects';
 
-const SPORTS_LIST: { id: SportType; label: string; icon: string }[] = [
+const SPORTS_LIST: { id: SportType; label: string; icon: string; highlight?: boolean }[] = [
   { id: 'futebol', label: 'Futebol', icon: '⚽' },
+  { id: 'libertadores', label: 'Libertadores', icon: '🏆', highlight: true },
   { id: 'basquete', label: 'Basquete', icon: '🏀' },
   { id: 'volei', label: 'Vôlei', icon: '🏐' },
   { id: 'judo', label: 'Judô', icon: '🥋' },
@@ -37,6 +38,73 @@ const SPORTS_LIST: { id: SportType; label: string; icon: string }[] = [
   { id: 'tenis', label: 'Tênis', icon: '🎾' },
   { id: 'filantropia', label: 'Projetos Sociais & Igrejas', icon: '🤝' },
 ];
+
+// TeamLogo component displaying verified crests from CBF/UOL/Wikimedia with fallback
+function TeamLogo({
+  teamName,
+  logoUrl,
+  size = 'md',
+  className = ''
+}: {
+  teamName: string;
+  logoUrl?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+    setUseFallback(false);
+  }, [logoUrl, teamName]);
+
+  const currentSrc = !useFallback ? logoUrl : undefined;
+
+  const sizeClasses = {
+    sm: 'w-6 h-6 p-0.5',
+    md: 'w-7 h-7 p-0.5',
+    lg: 'w-10 h-10 p-1',
+    xl: 'w-14 h-14 p-1'
+  }[size];
+
+  const imgSizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-7 h-7',
+    xl: 'w-10 h-10'
+  }[size];
+
+  const acronym = (teamName || 'TM')
+    .replace(/[^a-zA-Z0-9]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map(w => w[0])
+    .join('')
+    .substring(0, 3)
+    .toUpperCase() || 'TM';
+
+  return (
+    <div className={`relative shrink-0 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden shadow-sm ${sizeClasses} ${className}`}>
+      {!hasError && currentSrc ? (
+        <img
+          key={currentSrc}
+          src={currentSrc}
+          alt={teamName}
+          referrerPolicy="no-referrer"
+          className={`${imgSizeClasses} object-contain`}
+          onError={() => {
+            setHasError(true);
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white uppercase tracking-tighter">
+          {acronym}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function App() {
   // Initialize Bottom Anchor Ad (Google Ad Manager)
@@ -149,16 +217,29 @@ export default function App() {
     fetchGames();
   }, []);
 
+  // Helper to check if a match is CONMEBOL Libertadores
+  const isLibertadoresMatch = (m: FootballMatch) => {
+    return (m.sport === 'libertadores') || 
+           (m.division && m.division.toLowerCase().includes('libertadores')) || 
+           ((m as any).competition && (m as any).competition.toLowerCase().includes('libertadores'));
+  };
+
   // Filter lists derived from active sport
-  const sportMatches = matches.filter(m => (m.sport || 'futebol') === activeSport);
+  const sportMatches = matches.filter(m => {
+    if (activeSport === 'libertadores') {
+      return isLibertadoresMatch(m);
+    }
+    if (activeSport === 'futebol') {
+      return (m.sport || 'futebol') === 'futebol' || isLibertadoresMatch(m);
+    }
+    return (m.sport || 'futebol') === activeSport;
+  });
+
   const broadcastersList = ['Tudo', ...Array.from(new Set(sportMatches.flatMap(m => m.broadcasters)))];
   const divisionsList = ['Tudo', ...Array.from(new Set(sportMatches.map(m => m.division).filter(Boolean)))];
   
   // Apply filtering rules
-  const filteredMatches = matches.filter(match => {
-    const matchSport = match.sport || 'futebol';
-    if (matchSport !== activeSport) return false;
-
+  const filteredMatches = sportMatches.filter(match => {
     const matchDay = parseInt(match.date.split('-')[2]);
     
     // Search filter
@@ -178,6 +259,7 @@ export default function App() {
           match.awayTeam.toLowerCase().includes(word) ||
           match.stadium.toLowerCase().includes(word) ||
           (match.division && match.division.toLowerCase().includes(word)) ||
+          (match.round && match.round.toLowerCase().includes(word)) ||
           match.broadcasters.some(b => b.toLowerCase().includes(word))
         );
       }
@@ -366,7 +448,9 @@ export default function App() {
           {SPORTS_LIST.map(sport => {
             const count = sport.id === 'filantropia'
               ? SOCIAL_PROJECTS.length
-              : matches.filter(m => (m.sport || 'futebol') === sport.id).length;
+              : sport.id === 'libertadores'
+                ? matches.filter(m => isLibertadoresMatch(m)).length
+                : matches.filter(m => (m.sport || 'futebol') === sport.id).length;
             const isActive = activeSport === sport.id;
 
             return (
@@ -379,15 +463,21 @@ export default function App() {
                 }}
                 className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg shrink-0 transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wider ${
                   isActive
-                    ? 'bg-seagreen text-white shadow-sm scale-102 ring-1 ring-seagreen/40'
-                    : 'bg-[#081f13] text-emerald-300 hover:bg-[#0e2f1f] hover:text-white'
+                    ? sport.highlight 
+                      ? 'bg-amber-500 text-black shadow-md scale-102 ring-1 ring-amber-400 font-black'
+                      : 'bg-seagreen text-white shadow-sm scale-102 ring-1 ring-seagreen/40'
+                    : sport.highlight
+                      ? 'bg-amber-950/40 text-amber-300 border border-amber-500/30 hover:bg-amber-900/50 hover:text-white'
+                      : 'bg-[#081f13] text-emerald-300 hover:bg-[#0e2f1f] hover:text-white'
                 }`}
               >
                 <span className="text-sm">{sport.icon}</span>
                 <span>{sport.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                    isActive ? 'bg-[#020704] text-seagreen font-bold' : 'bg-green-950/80 text-emerald-300'
+                    isActive 
+                      ? sport.highlight ? 'bg-black text-amber-400 font-bold' : 'bg-[#020704] text-seagreen font-bold'
+                      : 'bg-green-950/80 text-emerald-300'
                   }`}
                 >
                   {count}
@@ -657,6 +747,42 @@ export default function App() {
           <SocialProjectsView />
         ) : (
           <>
+            {/* CONMEBOL Libertadores Official Tournament Banner */}
+            {activeSport === 'libertadores' && (
+              <div className="bg-gradient-to-r from-amber-950/60 via-[#101c13] to-amber-950/60 border border-amber-500/40 rounded-xl p-4 md:p-5 shadow-lg relative overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-2xl shrink-0 shadow-inner">
+                      🏆
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-base md:text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+                          CONMEBOL Libertadores 2026
+                        </h2>
+                        <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase rounded bg-amber-500 text-black">
+                          Fase Final
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-200/80 mt-1 max-w-2xl leading-relaxed">
+                        Acompanhe os confrontos dos gigantes do continente sul-americano com horários, estádios e canais oficiais de transmissão (TV Globo, ESPN, Disney+, Paramount+ e CazéTV).
+                      </p>
+                    </div>
+                  </div>
+
+                  <a 
+                    href="https://gol.conmebol.com/libertadores/pt-br" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="shrink-0 px-3.5 py-2 rounded-lg bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/30 text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-2 group"
+                  >
+                    <span>Portal Oficial CONMEBOL</span>
+                    <ExternalLink className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* Statistics Bar - Extremely Compact */}
             <section className="bg-[#05140d]/40 border border-green-950/40 rounded-lg py-1.5 px-3 flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1.5 text-[10px] text-green-400 font-mono tracking-wide">
           <div className="flex items-center gap-1.5">
@@ -802,22 +928,7 @@ export default function App() {
                             <span className="text-[11px] sm:text-xs md:text-sm font-bold text-white text-right line-clamp-2 break-words leading-tight min-w-0">
                               {match.homeTeam}
                             </span>
-                            <div className="relative shrink-0 w-7 h-7 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
-                              <img 
-                                src={match.homeTeamLogo} 
-                                alt={match.homeTeam} 
-                                referrerPolicy="no-referrer"
-                                className="w-5 h-5 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLElement).style.display = 'none';
-                                  const fallback = (e.target as HTMLElement).nextElementSibling;
-                                  if (fallback) fallback.classList.remove('hidden');
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white hidden">
-                                {match.homeTeam.substring(0, 3).toUpperCase()}
-                              </div>
-                            </div>
+                            <TeamLogo teamName={match.homeTeam} logoUrl={match.homeTeamLogo} size="md" />
                           </div>
 
                           {/* Versus state */}
@@ -838,22 +949,7 @@ export default function App() {
 
                           {/* Away team */}
                           <div className="flex items-center gap-1.5 sm:gap-2 w-[45%] md:w-5/12 min-w-0 justify-start">
-                            <div className="relative shrink-0 w-7 h-7 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
-                              <img 
-                                src={match.awayTeamLogo} 
-                                alt={match.awayTeam} 
-                                referrerPolicy="no-referrer"
-                                className="w-5 h-5 object-contain"
-                                onError={(e) => {
-                                  (e.target as HTMLElement).style.display = 'none';
-                                  const fallback = (e.target as HTMLElement).nextElementSibling;
-                                  if (fallback) fallback.classList.remove('hidden');
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white hidden">
-                                {match.awayTeam.substring(0, 3).toUpperCase()}
-                              </div>
-                            </div>
+                            <TeamLogo teamName={match.awayTeam} logoUrl={match.awayTeamLogo} size="md" />
                             <span className="text-[11px] sm:text-xs md:text-sm font-bold text-white text-left line-clamp-2 break-words leading-tight min-w-0">
                               {match.awayTeam}
                             </span>
@@ -933,7 +1029,7 @@ export default function App() {
 
         {/* Legal Disclaimer */}
         <div className="max-w-7xl mx-auto pt-3 border-t border-green-950/40 text-[10px] text-green-600/75 leading-relaxed font-normal normal-case text-center md:text-left">
-          <strong className="text-green-500 font-semibold">Aviso Legal & Transparência:</strong> O Esporte Radar atua estritamente como um guia informativo de transmissões esportivas. As datas, horários, estádios e canais de exibição são baseados nas divulgações públicas oficiais da CBF e das emissoras detentoras dos direitos, estando sujeitos a eventuais atrasos, remarcações ou cancelamentos sem aviso prévio. A plataforma não se responsabiliza por alterações de última hora efetuadas pelos organizadores.
+          <strong className="text-green-500 font-semibold">Aviso Legal & Transparência:</strong> O Esporte Radar atua estritamente como um guia informativo de transmissões esportivas. As datas, horários, estádios e canais de exibição são baseados nas divulgações públicas oficiais da CBF, CONMEBOL e das emissoras detentoras dos direitos, estando sujeitos a eventuais atrasos, remarcações ou cancelamentos sem aviso prévio. A plataforma não se responsabiliza por alterações de última hora efetuadas pelos organizadores.
         </div>
       </footer>
 
@@ -1012,7 +1108,7 @@ export default function App() {
                           <li><strong>Horário:</strong> Todos os horários seguem rigorosamente o fuso oficial de <em>Brasília (GMT-3)</em>.</li>
                           <li><strong>Onde Assistir:</strong> Clique em qualquer um dos canais listados abaixo para abrir diretamente o portal oficial de streaming ou transmissão.</li>
                           <li><strong>Status do Jogo:</strong> Indicado entre <em>Agendado</em>, <em>Ao Vivo</em> (durante a partida) ou <em>Finalizado</em>.</li>
-                          <li><strong>Aviso de Transparência:</strong> Informamos dados públicos divulgados pela CBF e emissoras. Não nos responsabilizamos por eventuais alterações de datas, horários ou cancelamentos de última hora.</li>
+                          <li><strong>Aviso de Transparência:</strong> Informamos dados públicos divulgados oficialmente pela CBF, CONMEBOL e pelas emissoras. Não nos responsabilizamos por eventuais alterações de datas, horários ou cancelamentos de última hora.</li>
                         </ul>
                       </div>
                     </motion.div>
@@ -1032,14 +1128,7 @@ export default function App() {
                 <div className="grid grid-cols-7 items-center justify-center py-4">
                   {/* Home */}
                   <div className="col-span-3 flex flex-col items-center space-y-2">
-                    <div className="h-14 w-14 rounded-full bg-white flex items-center justify-center p-1 border border-green-950/40 shadow-inner overflow-hidden">
-                      <img 
-                        src={selectedMatch.homeTeamLogo} 
-                        alt={selectedMatch.homeTeam} 
-                        referrerPolicy="no-referrer"
-                        className="h-10 w-10 object-contain"
-                      />
-                    </div>
+                    <TeamLogo teamName={selectedMatch.homeTeam} logoUrl={selectedMatch.homeTeamLogo} size="xl" />
                     <span className="text-sm font-bold text-white text-center">
                       {selectedMatch.homeTeam}
                     </span>
@@ -1076,14 +1165,7 @@ export default function App() {
 
                   {/* Away */}
                   <div className="col-span-3 flex flex-col items-center space-y-2">
-                    <div className="h-14 w-14 rounded-full bg-white flex items-center justify-center p-1 border border-green-950/40 shadow-inner overflow-hidden">
-                      <img 
-                        src={selectedMatch.awayTeamLogo} 
-                        alt={selectedMatch.awayTeam} 
-                        referrerPolicy="no-referrer"
-                        className="h-10 w-10 object-contain"
-                      />
-                    </div>
+                    <TeamLogo teamName={selectedMatch.awayTeam} logoUrl={selectedMatch.awayTeamLogo} size="xl" />
                     <span className="text-sm font-bold text-white text-center">
                       {selectedMatch.awayTeam}
                     </span>

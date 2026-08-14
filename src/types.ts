@@ -1,4 +1,4 @@
-export type SportType = 'futebol' | 'basquete' | 'volei' | 'judo' | 'automobilismo' | 'tenis' | 'filantropia';
+export type SportType = 'futebol' | 'libertadores' | 'basquete' | 'volei' | 'judo' | 'automobilismo' | 'tenis' | 'filantropia';
 
 export interface SocialProject {
   id: string;
