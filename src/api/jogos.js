@@ -95,17 +95,31 @@ function getOtherSportsEvents() {
 function getLibertadoresEvents() {
   return [
     {
-      id: 'lib-flu-csir',
+      id: 'lib-csir-flu',
+      sport: 'futebol',
+      homeTeam: 'Independiente Rivadavia',
+      homeTeamLogo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801',
+      awayTeam: 'Fluminense',
+      awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg',
+      date: '2026-08-18',
+      time: '19:00',
+      division: 'Libertadores',
+      stadium: 'Estadio Malvinas Argentinas - Mendoza (ARG)',
+      broadcasters: ['ESPN', 'Disney+'],
+      status: 'agendado'
+    },
+    {
+      id: 'lib-flu-csir-volta',
       sport: 'futebol',
       homeTeam: 'Fluminense',
       homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg',
       awayTeam: 'Independiente Rivadavia',
-      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png',
-      date: '2026-08-18',
+      awayTeamLogo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801',
+      date: '2026-08-25',
       time: '19:00',
       division: 'Libertadores',
       stadium: 'Maracanã - Rio de Janeiro (RJ)',
-      broadcasters: ['Paramount+', 'ESPN 4', 'Disney+'],
+      broadcasters: ['ESPN', 'Disney+'],
       status: 'agendado'
     },
     {

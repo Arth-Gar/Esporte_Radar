@@ -437,21 +437,60 @@ export default function App() {
 
   // Broadcaster styling details helper
   const getBroadcasterStyle = (broadcaster: string) => {
-    const name = broadcaster.toLowerCase();
+    const name = (broadcaster || '').toLowerCase();
     if (name.includes('globo')) {
       return { bg: 'bg-blue-600/20 text-blue-300 border-blue-500/30', badge: 'bg-blue-500 text-white' };
     } else if (name.includes('sportv')) {
       return { bg: 'bg-sky-600/20 text-sky-300 border-sky-500/30', badge: 'bg-sky-500 text-white' };
     } else if (name.includes('premiere')) {
       return { bg: 'bg-amber-500/20 text-amber-300 border-amber-500/30', badge: 'bg-amber-500 text-black' };
+    } else if (name.includes('espn')) {
+      return { bg: 'bg-red-600/20 text-red-300 border-red-500/30', badge: 'bg-red-600 text-white' };
+    } else if (name.includes('disney')) {
+      return { bg: 'bg-indigo-600/20 text-indigo-300 border-indigo-500/30', badge: 'bg-indigo-600 text-white' };
+    } else if (name.includes('paramount')) {
+      return { bg: 'bg-blue-700/20 text-blue-300 border-blue-600/30', badge: 'bg-blue-700 text-white' };
+    } else if (name.includes('max') || name.includes('tnt') || name.includes('space') || name.includes('hbo')) {
+      return { bg: 'bg-purple-600/20 text-purple-300 border-purple-500/30', badge: 'bg-purple-600 text-white' };
     } else if (name.includes('caze') || name.includes('youtube')) {
       return { bg: 'bg-red-600/20 text-red-300 border-red-500/30', badge: 'bg-red-600 text-white' };
     } else if (name.includes('prime') || name.includes('amazon')) {
       return { bg: 'bg-cyan-600/20 text-cyan-300 border-cyan-500/30', badge: 'bg-cyan-500 text-white' };
+    } else if (name.includes('goat')) {
+      return { bg: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30', badge: 'bg-emerald-500 text-white' };
+    } else if (name.includes('sbt')) {
+      return { bg: 'bg-teal-600/20 text-teal-300 border-teal-500/30', badge: 'bg-teal-600 text-white' };
+    } else if (name.includes('band')) {
+      return { bg: 'bg-orange-600/20 text-orange-300 border-orange-500/30', badge: 'bg-orange-500 text-white' };
     } else if (name.includes('brasil')) {
       return { bg: 'bg-yellow-600/20 text-yellow-300 border-yellow-500/30', badge: 'bg-yellow-600 text-black' };
     }
     return { bg: 'bg-emerald-600/20 text-emerald-300 border-emerald-500/30', badge: 'bg-emerald-500 text-white' };
+  };
+
+  // Direct official streaming portal URL resolver for each broadcaster
+  const getBroadcasterUrl = (broadcaster: string, fallbackUrl?: string) => {
+    const name = (broadcaster || '').toLowerCase().trim();
+    if (!name || name.includes('confirmar')) return '';
+    if (name.includes('disney')) return 'https://www.disneyplus.com/';
+    if (name.includes('espn')) return 'https://www.espn.com.br/watch/';
+    if (name.includes('paramount')) return 'https://www.paramountplus.com/';
+    if (name.includes('max') || name.includes('tnt') || name.includes('space') || name.includes('hbo')) return 'https://www.max.com/';
+    if (name.includes('sportv')) return 'https://globoplay.globo.com/canais/sportv/';
+    if (name.includes('premiere')) return 'https://premiere.globo.com/';
+    if (name.includes('globo')) return 'https://globoplay.globo.com/';
+    if (name.includes('caze') || name.includes('cazetv')) return 'https://www.youtube.com/@CazeTV';
+    if (name.includes('goat')) return 'https://www.youtube.com/@CanalGOATBR';
+    if (name.includes('prime') || name.includes('amazon')) return 'https://www.primevideo.com/';
+    if (name.includes('sbt')) return 'https://www.sbt.com.br/ao-vivo';
+    if (name.includes('band')) return 'https://www.band.uol.com.br/';
+    if (name.includes('record') || name.includes('playplus')) return 'https://www.playplus.com/';
+    if (name.includes('cbf tv') || name.includes('cbftv') || name.includes('brasil')) return 'https://www.youtube.com/@brasil';
+    if (name.includes('benja')) return 'https://www.youtube.com/@canaldobenja';
+    if (name.includes('nbb')) return 'https://www.youtube.com/@NBB';
+    if (name.includes('nba')) return 'https://www.nba.com/watch/league-pass-stream';
+    if (name.includes('youtube')) return 'https://www.youtube.com/';
+    return fallbackUrl || 'https://www.disneyplus.com/';
   };
 
   const getDivisionStyle = (div: string) => {
@@ -1449,7 +1488,7 @@ export default function App() {
                 {/* Stadium details */}
                 <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-green-400 bg-[#05140d]/60 px-3 py-1.5 rounded border border-green-950/40">
                   <MapPin className="h-3 w-3 text-green-500" />
-                  <span>Estádio: <strong className="text-white">{selectedMatch.stadium}</strong></span>
+                  <span>Estádio: <strong className="text-white">{selectedMatch.stadium || 'A confirmar'}</strong></span>
                 </div>
 
               </div>
@@ -1465,14 +1504,28 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {selectedMatch.broadcasters.map((broadcaster, index) => {
                       const style = getBroadcasterStyle(broadcaster);
-                      let url = selectedMatch.transmissionUrl;
-                      const name = broadcaster.toLowerCase();
-                      
-                      if (name.includes('globo')) url = 'https://globoplay.globo.com/';
-                      else if (name.includes('sportv')) url = 'https://globoplay.globo.com/canais/sportv/';
-                      else if (name.includes('premiere')) url = 'https://premiere.globo.com/';
-                      else if (name.includes('caze') || name.includes('youtube')) url = 'https://www.youtube.com/@CazeTV';
-                      else if (name.includes('prime')) url = 'https://www.primevideo.com';
+                      const isUnconfirmed = broadcaster.toLowerCase().includes('confirmar');
+                      const url = getBroadcasterUrl(broadcaster, selectedMatch.transmissionUrl);
+
+                      if (isUnconfirmed || !url) {
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-4 rounded bg-[#020704] border border-amber-500/30 text-amber-300 opacity-80"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="w-8 h-8 rounded bg-amber-950/60 border border-amber-500/40 flex items-center justify-center text-[9px] font-black uppercase text-amber-400">
+                                ?
+                              </span>
+                              <div>
+                                <p className="text-xs font-bold text-white">Transmissão a confirmar</p>
+                                <p className="text-[9px] text-amber-400/80 font-mono uppercase tracking-wider">Aguardando escala oficial</p>
+                              </div>
+                            </div>
+                            <Clock className="h-3.5 w-3.5 text-amber-400" />
+                          </div>
+                        );
+                      }
 
                       return (
                         <a
@@ -1483,12 +1536,12 @@ export default function App() {
                           className="flex items-center justify-between p-4 rounded bg-[#020704] hover:bg-[#082015] border border-green-950/40 hover:border-seagreen text-white transition-all duration-200 group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
-                            <span className="w-8 h-8 rounded bg-[#092215] flex items-center justify-center text-[9px] font-black uppercase text-seagreen">
-                              {broadcaster.substring(0, 2).toUpperCase()}
+                            <span className={`w-8 h-8 rounded flex items-center justify-center text-[9px] font-black uppercase ${style.badge}`}>
+                              {broadcaster.substring(0, 3).toUpperCase()}
                             </span>
                             <div>
                               <p className="text-xs font-bold text-white group-hover:text-seagreen">{broadcaster}</p>
-                              <p className="text-[9px] text-green-400/70 font-mono uppercase tracking-wider">Transmissão Direta</p>
+                              <p className="text-[9px] text-green-400/70 font-mono uppercase tracking-wider">Abrir Portal Oficial</p>
                             </div>
                           </div>
                           <ExternalLink className="h-3.5 w-3.5 text-green-500 group-hover:text-seagreen transition-colors" />

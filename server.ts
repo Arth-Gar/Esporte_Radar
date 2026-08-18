@@ -388,9 +388,9 @@ const CLUB_MAPPING: { [key: string]: { name: string; slug: string; logo: string 
   'sporting cristal': { name: 'Sporting Cristal', slug: 'sporting-cristal', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10108.png' },
   'melgar': { name: 'FBC Melgar', slug: 'melgar', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10109.png' },
   'always ready': { name: 'Always Ready', slug: 'always-ready', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10110.png' },
-  'independiente rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' },
-  'csir': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' },
-  'rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' }
+  'independiente rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' },
+  'csir': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' },
+  'rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' }
 };
 
 // Helper to normalize name and return beautiful details
@@ -947,14 +947,24 @@ function generateOtherSportsEvents(): any[] {
 function generateLibertadoresEvents(): any[] {
   const libList = [
     {
-      id: 'lib-flu-csir',
+      id: 'lib-csir-flu',
       round: 'Oitavas de Final - Ida',
-      home: 'Fluminense',
-      away: 'Independiente Rivadavia',
+      home: 'Independiente Rivadavia',
+      away: 'Fluminense',
       date: '2026-08-18',
       time: '19:00',
+      stadium: 'Estadio Malvinas Argentinas - Mendoza (ARG)',
+      broadcasters: ['ESPN', 'Disney+']
+    },
+    {
+      id: 'lib-flu-csir-volta',
+      round: 'Oitavas de Final - Volta',
+      home: 'Fluminense',
+      away: 'Independiente Rivadavia',
+      date: '2026-08-25',
+      time: '19:00',
       stadium: 'Maracanã - Rio de Janeiro (RJ)',
-      broadcasters: ['Paramount+', 'ESPN 4', 'Disney+']
+      broadcasters: ['ESPN', 'Disney+']
     },
     {
       id: 'lib-1',
@@ -1045,11 +1055,19 @@ function generateLibertadoresEvents(): any[] {
       awayTeamSlug: awayInfo.slug,
       awayTeamLogo: awayInfo.logo,
       date: item.date,
-      time: item.time,
-      stadium: item.stadium,
-      broadcasters: item.broadcasters,
-      transmissionDetails: getTransmissionDetails(item.broadcasters),
-      transmissionUrl: 'https://gol.conmebol.com/libertadores/pt-br',
+      time: item.time || 'A confirmar',
+      stadium: item.stadium?.trim() || 'A confirmar',
+      broadcasters: item.broadcasters && item.broadcasters.length > 0 ? item.broadcasters : ['A confirmar'],
+      transmissionDetails: getTransmissionDetails(item.broadcasters || []),
+      transmissionUrl: (item.broadcasters && item.broadcasters.some((b: string) => b.toLowerCase().includes('disney')))
+        ? 'https://www.disneyplus.com/'
+        : (item.broadcasters && item.broadcasters.some((b: string) => b.toLowerCase().includes('espn')))
+        ? 'https://www.espn.com.br/watch/'
+        : (item.broadcasters && item.broadcasters.some((b: string) => b.toLowerCase().includes('paramount')))
+        ? 'https://www.paramountplus.com/'
+        : (item.broadcasters && item.broadcasters.some((b: string) => b.toLowerCase().includes('globo')))
+        ? 'https://globoplay.globo.com/'
+        : 'https://www.disneyplus.com/',
       status: 'agendado',
       scraped: false
     };
