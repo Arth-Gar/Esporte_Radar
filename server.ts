@@ -387,7 +387,10 @@ const CLUB_MAPPING: { [key: string]: { name: string; slug: string; logo: string 
   'deportivo táchira': { name: 'Deportivo Táchira', slug: 'deportivo-tachira', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10107.png' },
   'sporting cristal': { name: 'Sporting Cristal', slug: 'sporting-cristal', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10108.png' },
   'melgar': { name: 'FBC Melgar', slug: 'melgar', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10109.png' },
-  'always ready': { name: 'Always Ready', slug: 'always-ready', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10110.png' }
+  'always ready': { name: 'Always Ready', slug: 'always-ready', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10110.png' },
+  'independiente rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' },
+  'csir': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' },
+  'rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png' }
 };
 
 // Helper to normalize name and return beautiful details
@@ -943,6 +946,16 @@ function generateOtherSportsEvents(): any[] {
 // Generate curated schedule for CONMEBOL Libertadores 2026 (Mata-mata / Oitavas e Quartas)
 function generateLibertadoresEvents(): any[] {
   const libList = [
+    {
+      id: 'lib-flu-csir',
+      round: 'Oitavas de Final - Ida',
+      home: 'Fluminense',
+      away: 'Independiente Rivadavia',
+      date: '2026-08-18',
+      time: '19:00',
+      stadium: 'Maracanã - Rio de Janeiro (RJ)',
+      broadcasters: ['Paramount+', 'ESPN 4', 'Disney+']
+    },
     {
       id: 'lib-1',
       round: 'Oitavas de Final - Ida',

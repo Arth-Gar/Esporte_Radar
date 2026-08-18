@@ -92,6 +92,39 @@ function getOtherSportsEvents() {
   ];
 }
 
+function getLibertadoresEvents() {
+  return [
+    {
+      id: 'lib-flu-csir',
+      sport: 'futebol',
+      homeTeam: 'Fluminense',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg',
+      awayTeam: 'Independiente Rivadavia',
+      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png',
+      date: '2026-08-18',
+      time: '19:00',
+      division: 'Libertadores',
+      stadium: 'Maracanã - Rio de Janeiro (RJ)',
+      broadcasters: ['Paramount+', 'ESPN 4', 'Disney+'],
+      status: 'agendado'
+    },
+    {
+      id: 'lib-1',
+      sport: 'futebol',
+      homeTeam: 'Flamengo',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
+      awayTeam: 'Olimpia',
+      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10080.png',
+      date: '2026-08-18',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Maracanã - Rio de Janeiro (RJ)',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+'],
+      status: 'agendado'
+    }
+  ];
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -232,7 +265,8 @@ export default async function handler(req, res) {
     }
 
     const otherSports = getOtherSportsEvents();
-    const combinedData = [...scrapedGames, ...otherSports];
+    const libertadoresEvents = getLibertadoresEvents();
+    const combinedData = [...scrapedGames, ...libertadoresEvents, ...otherSports];
 
     res.status(200).json({
       success: true,
