@@ -46,6 +46,180 @@ function fetchJsonSecurely(urlStr) {
   });
 }
 
+function getClubLogo(name) {
+  const n = (name || '').toLowerCase().trim();
+  const logos = {
+    'flamengo': 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
+    'fluminense': 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg',
+    'botafogo': 'https://conteudo.cbf.com.br/clubes/20011/escudo.jpg',
+    'vasco': 'https://conteudo.cbf.com.br/clubes/20019/escudo.jpg',
+    'palmeiras': 'https://conteudo.cbf.com.br/clubes/20005/escudo.jpg',
+    'são paulo': 'https://conteudo.cbf.com.br/clubes/20002/escudo.jpg',
+    'corinthians': 'https://conteudo.cbf.com.br/clubes/20001/escudo.jpg',
+    'santos': 'https://conteudo.cbf.com.br/clubes/20003/escudo.jpg',
+    'atlético-mg': 'https://conteudo.cbf.com.br/clubes/20007/escudo.jpg',
+    'atletico mineiro': 'https://conteudo.cbf.com.br/clubes/20007/escudo.jpg',
+    'cruzeiro': 'https://conteudo.cbf.com.br/clubes/20008/escudo.jpg',
+    'grêmio': 'https://conteudo.cbf.com.br/clubes/20009/escudo.jpg',
+    'internacional': 'https://conteudo.cbf.com.br/clubes/20010/escudo.jpg',
+    'independiente rivadavia': 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png',
+    'olimpia': 'https://images.fotmob.com/image_resources/logo/teamlogo/10080.png',
+    'river plate': 'https://images.fotmob.com/image_resources/logo/teamlogo/10083.png',
+    'nacional-uru': 'https://images.fotmob.com/image_resources/logo/teamlogo/10085.png',
+    'ldu quito': 'https://images.fotmob.com/image_resources/logo/teamlogo/10088.png',
+    'san lorenzo': 'https://images.fotmob.com/image_resources/logo/teamlogo/10082.png',
+    'boca juniors': 'https://images.fotmob.com/image_resources/logo/teamlogo/10084.png',
+    'peñarol': 'https://images.fotmob.com/image_resources/logo/teamlogo/10086.png',
+    'colo-colo': 'https://images.fotmob.com/image_resources/logo/teamlogo/10087.png'
+  };
+
+  for (const [k, v] of Object.entries(logos)) {
+    if (n.includes(k)) return v;
+  }
+  return 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg';
+}
+
+function getLibertadoresEvents() {
+  return [
+    {
+      id: 'lib-flu-csir',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Ida',
+      homeTeam: 'Fluminense',
+      homeTeamLogo: getClubLogo('Fluminense'),
+      awayTeam: 'Independiente Rivadavia',
+      awayTeamLogo: getClubLogo('Independiente Rivadavia'),
+      date: '2026-08-18',
+      time: '19:00',
+      division: 'Libertadores',
+      stadium: 'Maracanã - Rio de Janeiro (RJ)',
+      broadcasters: ['Paramount+', 'ESPN 4', 'Disney+'],
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'lib-1',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Ida',
+      homeTeam: 'Flamengo',
+      homeTeamLogo: getClubLogo('Flamengo'),
+      awayTeam: 'Olimpia',
+      awayTeamLogo: getClubLogo('Olimpia'),
+      date: '2026-08-18',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Maracanã - Rio de Janeiro (RJ)',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+'],
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'lib-2',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Ida',
+      homeTeam: 'River Plate',
+      homeTeamLogo: getClubLogo('River Plate'),
+      awayTeam: 'Palmeiras',
+      awayTeamLogo: getClubLogo('Palmeiras'),
+      date: '2026-08-19',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Monumental de Núñez - Buenos Aires (ARG)',
+      broadcasters: ['ESPN', 'Disney+', 'Paramount+'],
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'lib-3',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Ida',
+      homeTeam: 'Botafogo',
+      homeTeamLogo: getClubLogo('Botafogo'),
+      awayTeam: 'Nacional-URU',
+      awayTeamLogo: getClubLogo('Nacional-URU'),
+      date: '2026-08-20',
+      time: '19:00',
+      division: 'Libertadores',
+      stadium: 'Nilton Santos (Engenhão) - Rio de Janeiro (RJ)',
+      broadcasters: ['Paramount+', 'ESPN', 'Disney+'],
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'lib-4',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Ida',
+      homeTeam: 'São Paulo',
+      homeTeamLogo: getClubLogo('São Paulo'),
+      awayTeam: 'LDU Quito',
+      awayTeamLogo: getClubLogo('LDU Quito'),
+      date: '2026-08-20',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'MorumBIS - São Paulo (SP)',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+'],
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'lib-5',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Volta',
+      homeTeam: 'Palmeiras',
+      homeTeamLogo: getClubLogo('Palmeiras'),
+      awayTeam: 'River Plate',
+      awayTeamLogo: getClubLogo('River Plate'),
+      date: '2026-08-26',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Allianz Parque - São Paulo (SP)',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+'],
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'lib-6',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Volta',
+      homeTeam: 'Olimpia',
+      homeTeamLogo: getClubLogo('Olimpia'),
+      awayTeam: 'Flamengo',
+      awayTeamLogo: getClubLogo('Flamengo'),
+      date: '2026-08-27',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Defensores del Chaco - Assunção (PAR)',
+      broadcasters: ['ESPN', 'Disney+', 'Paramount+'],
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'lib-7',
+      sport: 'futebol',
+      competition: 'CONMEBOL Libertadores',
+      round: 'Oitavas de Final - Volta',
+      homeTeam: 'Atlético-MG',
+      homeTeamLogo: getClubLogo('Atlético-MG'),
+      awayTeam: 'San Lorenzo',
+      awayTeamLogo: getClubLogo('San Lorenzo'),
+      date: '2026-08-27',
+      time: '19:00',
+      division: 'Libertadores',
+      stadium: 'Arena MRV - Belo Horizonte (MG)',
+      broadcasters: ['Paramount+', 'Disney+'],
+      status: 'agendado',
+      scraped: false
+    }
+  ];
+}
+
 function getOtherSportsEvents() {
   return [
     {
@@ -60,7 +234,8 @@ function getOtherSportsEvents() {
       division: 'NBB',
       stadium: 'Ginásio Pedrocão - Franca',
       broadcasters: ['SporTV 3', 'YouTube NBB', 'TV Cultura'],
-      status: 'agendado'
+      status: 'agendado',
+      scraped: false
     },
     {
       id: 'volei-1',
@@ -74,7 +249,8 @@ function getOtherSportsEvents() {
       division: 'Superliga Masc.',
       stadium: 'Ginásio do Riacho - Contagem',
       broadcasters: ['SporTV 2'],
-      status: 'agendado'
+      status: 'agendado',
+      scraped: false
     },
     {
       id: 'auto-1',
@@ -88,7 +264,23 @@ function getOtherSportsEvents() {
       division: 'Fórmula 1',
       stadium: 'Circuito de Zandvoort - Holanda',
       broadcasters: ['Band', 'BandSports', 'F1 TV Pro'],
-      status: 'agendado'
+      status: 'agendado',
+      scraped: false
+    },
+    {
+      id: 'mma-1',
+      sport: 'lutas',
+      homeTeam: 'UFC 305: Du Plessis vs. Adesanya',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Disputa de Cinturão Peso Médio',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-17',
+      time: '23:00',
+      division: 'UFC',
+      stadium: 'RAC Arena - Perth (Austrália)',
+      broadcasters: ['UFC Fight Pass', 'Band (Card Preliminar)'],
+      status: 'agendado',
+      scraped: false
     }
   ];
 }
@@ -129,7 +321,6 @@ export default async function handler(req, res) {
         const meta = result.meta || {};
         lastPage = typeof meta.last_page === 'number' ? meta.last_page : 1;
 
-        // CBF returns items either in `result.jogos` or `result.data`
         const games = result.jogos || result.data || [];
         if (games.length === 0) break;
 
@@ -140,10 +331,9 @@ export default async function handler(req, res) {
 
             if (homeName === 'A definir' && awayName === 'A definir') continue;
 
-            const homeLogo = game.mandante?.url_escudo || game.equipe_mandante?.escudo || 'https://www.cbf.com.br/assets/img/cbf-logo.png';
-            const awayLogo = game.visitante?.url_escudo || game.equipe_visitante?.escudo || 'https://www.cbf.com.br/assets/img/cbf-logo.png';
+            const homeLogo = game.mandante?.url_escudo || game.equipe_mandante?.escudo || getClubLogo(homeName);
+            const awayLogo = game.visitante?.url_escudo || game.equipe_visitante?.escudo || getClubLogo(awayName);
 
-            // Format date from DD/MM/YYYY to YYYY-MM-DD if needed
             let formattedDate = game.data_realizacao || game.data || '';
             if (formattedDate.includes('/')) {
               const parts = formattedDate.split('/');
@@ -214,8 +404,12 @@ export default async function handler(req, res) {
       }
     }
 
+    const libertadoresEvents = getLibertadoresEvents();
     const otherSports = getOtherSportsEvents();
-    const combinedData = [...scrapedGames, ...otherSports];
+    
+    // Combine and sort
+    const combinedData = [...scrapedGames, ...libertadoresEvents, ...otherSports];
+    combinedData.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
 
     res.status(200).json({
       success: true,
@@ -223,6 +417,8 @@ export default async function handler(req, res) {
       timestamp: new Date().toISOString(),
       info: {
         scrapedCount: scrapedGames.length,
+        libertadoresCount: libertadoresEvents.length,
+        otherSportsCount: otherSports.length,
         total: combinedData.length
       },
       data: combinedData
@@ -230,9 +426,16 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("Erro no proxy Serverless da CBF:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Erro ao conectar com a API da CBF'
+    // Even if CBF fails, return curated events
+    const libertadoresEvents = getLibertadoresEvents();
+    const otherSports = getOtherSportsEvents();
+    const fallbackData = [...libertadoresEvents, ...otherSports];
+
+    res.status(200).json({
+      success: true,
+      source: 'vercel-fallback',
+      warning: error.message || 'Erro ao conectar com a API da CBF',
+      data: fallbackData
     });
   }
 }
