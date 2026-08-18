@@ -91,12 +91,14 @@ function getClubLogo(name) {
 }
 
 function getLibertadoresBroadcasters(homeName, awayName) {
-  const combined = `${homeName} ${awayName}`.toLowerCase();
-  if (combined.includes('fluminense') || combined.includes('rivadavia')) {
-    return ['ESPN', 'Disney+'];
-  }
+  const combined = `${homeName} ${awayName}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  // Specific official broadcast distribution for CONMEBOL Libertadores 2026:
   if (combined.includes('flamengo') || combined.includes('cruzeiro')) {
     return ['TV Globo', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('fluminense') || combined.includes('rivadavia')) {
+    return ['ESPN', 'Disney+'];
   }
   if (combined.includes('palmeiras') || combined.includes('cerro')) {
     return ['ESPN', 'Disney+', 'Paramount+'];
@@ -107,11 +109,28 @@ function getLibertadoresBroadcasters(homeName, awayName) {
   if (combined.includes('mirassol') || combined.includes('ldu')) {
     return ['ESPN', 'Disney+'];
   }
-  return ['A confirmar'];
+  if (combined.includes('catolica') || combined.includes('estudiantes')) {
+    return ['ESPN 4', 'Disney+'];
+  }
+  if (combined.includes('tolima') || combined.includes('valle') || combined.includes('idv')) {
+    return ['Paramount+'];
+  }
+  if (combined.includes('coquimbo') || combined.includes('platense')) {
+    return ['Paramount+'];
+  }
+
+  if (combined.includes('river') || combined.includes('boca') || combined.includes('nacional') || combined.includes('penarol') || combined.includes('colo')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('san lorenzo') || combined.includes('olimpia') || combined.includes('libertad') || combined.includes('bolivar') || combined.includes('strongest')) {
+    return ['Paramount+'];
+  }
+
+  return ['ESPN', 'Disney+'];
 }
 
 async function scrapeConmebolLibertadores() {
-  const fixtureIds = [1620, 1605, 1638, 1626, 1629, 1632, 1641, 1623, 1635, 1647, 1602, 1611, 1644];
+  const fixtureIds = [1602, 1605, 1608, 1611, 1614, 1617, 1620, 1623, 1626, 1629, 1632, 1635, 1638, 1641, 1644, 1647];
   try {
     const fetchPromises = fixtureIds.map(async (id) => {
       try {

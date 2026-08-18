@@ -956,23 +956,52 @@ let lastLibertadoresFetchTime = 0;
 
 // Broadcasters mapper helper for CONMEBOL Libertadores matches in Brazil
 function getLibertadoresBroadcasters(homeName: string, awayName: string): string[] {
-  const combined = `${homeName} ${awayName}`.toLowerCase();
-  if (combined.includes('fluminense') || combined.includes('rivadavia')) {
-    return ['ESPN', 'Disney+'];
-  }
+  const combined = `${homeName} ${awayName}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  // Specific official broadcast distribution for CONMEBOL Libertadores 2026:
+  // 1. Flamengo vs Cruzeiro: TV Aberta (Globo) + Disney (ESPN / Disney+)
   if (combined.includes('flamengo') || combined.includes('cruzeiro')) {
     return ['TV Globo', 'ESPN', 'Disney+'];
   }
+  // 2. Fluminense vs Independiente Rivadavia: Disney (ESPN / Disney+)
+  if (combined.includes('fluminense') || combined.includes('rivadavia')) {
+    return ['ESPN', 'Disney+'];
+  }
+  // 3. Palmeiras vs Cerro Porteño: ESPN / Disney+ e Paramount+
   if (combined.includes('palmeiras') || combined.includes('cerro')) {
     return ['ESPN', 'Disney+', 'Paramount+'];
   }
+  // 4. Corinthians vs Rosario Central: Paramount+, ESPN, Disney+
   if (combined.includes('corinthians') || combined.includes('rosario')) {
     return ['Paramount+', 'ESPN', 'Disney+'];
   }
+  // 5. Mirassol vs LDU Quito: ESPN / Disney+
   if (combined.includes('mirassol') || combined.includes('ldu')) {
     return ['ESPN', 'Disney+'];
   }
-  return ['A confirmar'];
+  // 6. Universidad Católica vs Estudiantes de La Plata: ESPN 4 / Disney+
+  if (combined.includes('catolica') || combined.includes('estudiantes')) {
+    return ['ESPN 4', 'Disney+'];
+  }
+  // 7. Deportes Tolima vs Independiente del Valle: Paramount+
+  if (combined.includes('tolima') || combined.includes('valle') || combined.includes('idv')) {
+    return ['Paramount+'];
+  }
+  // 8. Coquimbo Unido vs Platense: Paramount+
+  if (combined.includes('coquimbo') || combined.includes('platense')) {
+    return ['Paramount+'];
+  }
+
+  // Other South American club matchups in CONMEBOL tournaments:
+  if (combined.includes('river') || combined.includes('boca') || combined.includes('nacional') || combined.includes('penarol') || combined.includes('colo')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('san lorenzo') || combined.includes('olimpia') || combined.includes('libertad') || combined.includes('bolivar') || combined.includes('strongest')) {
+    return ['Paramount+'];
+  }
+
+  // Universal CONMEBOL fallback: All Libertadores matches are broadcast by Disney (ESPN / Disney+) or Paramount+
+  return ['ESPN', 'Disney+'];
 }
 
 // Scrapes live match view pages directly from CONMEBOL (e.g. gol.conmebol.com/libertadores/pt-br/fixture/view/:id)
@@ -982,8 +1011,8 @@ async function scrapeConmebolLibertadores(forceRefresh: boolean = false): Promis
     return cachedLibertadoresGames;
   }
 
-  // Active fixture IDs for Oitavas de Final on CONMEBOL
-  const fixtureIds = [1620, 1605, 1638, 1626, 1629, 1632, 1641, 1623, 1635, 1647, 1602, 1611, 1644];
+  // All 16 official fixture IDs for Oitavas de Final on CONMEBOL
+  const fixtureIds = [1602, 1605, 1608, 1611, 1614, 1617, 1620, 1623, 1626, 1629, 1632, 1635, 1638, 1641, 1644, 1647];
   
   try {
     const fetchPromises = fixtureIds.map(async (id) => {
@@ -1101,8 +1130,92 @@ async function scrapeConmebolLibertadores(forceRefresh: boolean = false): Promis
 function generateLibertadoresEvents(): any[] {
   const libList = [
     {
+      id: 'lib-1608',
+      round: 'Oitavas de Final - Ida',
+      home: 'Fluminense',
+      away: 'Independiente Rivadavia',
+      date: '2026-08-11',
+      time: '19:00',
+      stadium: 'Estadio Jornalista Mário Filho (Maracanã)',
+      referee: 'CONMEBOL Libertadores',
+      broadcasters: ['ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1608'
+    },
+    {
+      id: 'lib-1614',
+      round: 'Oitavas de Final - Ida',
+      home: 'Estudiantes',
+      away: 'Universidad Católica',
+      date: '2026-08-11',
+      time: '21:30',
+      stadium: 'Estadio Jorge Luis Hirschi',
+      referee: 'CONMEBOL Libertadores',
+      broadcasters: ['ESPN 4', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1614'
+    },
+    {
+      id: 'lib-1647',
+      round: 'Oitavas de Final - Ida',
+      home: 'Palmeiras',
+      away: 'Cerro Porteño',
+      date: '2026-08-12',
+      time: '19:00',
+      stadium: 'Allianz Parque',
+      referee: 'Gustavo Adrián Tejera Capo',
+      broadcasters: ['ESPN', 'Disney+', 'Paramount+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1647'
+    },
+    {
+      id: 'lib-1617',
+      round: 'Oitavas de Final - Ida',
+      home: 'Platense',
+      away: 'Coquimbo Unido',
+      date: '2026-08-12',
+      time: '19:00',
+      stadium: 'Estadio Ciudad de Vicente López',
+      referee: 'CONMEBOL Libertadores',
+      broadcasters: ['Paramount+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1617'
+    },
+    {
+      id: 'lib-1602',
+      round: 'Oitavas de Final - Ida',
+      home: 'Cruzeiro',
+      away: 'Flamengo',
+      date: '2026-08-12',
+      time: '21:30',
+      stadium: 'Estádio Governador Magalhães Pinto (Mineirão)',
+      referee: 'Yael Falcón Pérez',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1602'
+    },
+    {
+      id: 'lib-1611',
+      round: 'Oitavas de Final - Ida',
+      home: 'Mirassol',
+      away: 'LDU Quito',
+      date: '2026-08-13',
+      time: '19:00',
+      stadium: 'Estádio José Maria de Campos Maia',
+      referee: 'Alexis Herrera',
+      broadcasters: ['ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1611'
+    },
+    {
+      id: 'lib-1644',
+      round: 'Oitavas de Final - Ida',
+      home: 'Rosario Central',
+      away: 'Corinthians',
+      date: '2026-08-13',
+      time: '21:30',
+      stadium: 'Estadio Gigante de Arroyito',
+      referee: 'Andrés Matonte',
+      broadcasters: ['Paramount+', 'ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1644'
+    },
+    {
       id: 'lib-1620',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Independiente Rivadavia',
       away: 'Fluminense',
       date: '2026-08-18',
@@ -1114,31 +1227,31 @@ function generateLibertadoresEvents(): any[] {
     },
     {
       id: 'lib-1605',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Deportes Tolima',
       away: 'Independiente Valle',
       date: '2026-08-18',
       time: '21:30',
       stadium: 'Estadio Manuel Murillo Toro',
       referee: 'Wilton Pereira Sampaio',
-      broadcasters: ['A confirmar'],
+      broadcasters: ['Paramount+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1605'
     },
     {
       id: 'lib-1638',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Universidad Católica',
       away: 'Estudiantes',
       date: '2026-08-18',
       time: '21:30',
       stadium: 'Claro Arena',
       referee: 'Wilmar Alexander Roldán Pérez',
-      broadcasters: ['A confirmar'],
+      broadcasters: ['ESPN 4', 'Disney+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1638'
     },
     {
       id: 'lib-1626',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Cerro Porteño',
       away: 'Palmeiras',
       date: '2026-08-19',
@@ -1150,19 +1263,19 @@ function generateLibertadoresEvents(): any[] {
     },
     {
       id: 'lib-1629',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Coquimbo Unido',
       away: 'Platense',
       date: '2026-08-19',
       time: '19:00',
       stadium: 'Estadio Municipal Francisco Sánchez Rumoroso',
       referee: 'Roberto Bruno Pérez Gutierrez',
-      broadcasters: ['A confirmar'],
+      broadcasters: ['Paramount+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1629'
     },
     {
       id: 'lib-1632',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Flamengo',
       away: 'Cruzeiro',
       date: '2026-08-19',
@@ -1174,7 +1287,7 @@ function generateLibertadoresEvents(): any[] {
     },
     {
       id: 'lib-1641',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'LDU Quito',
       away: 'Mirassol',
       date: '2026-08-20',
@@ -1186,7 +1299,7 @@ function generateLibertadoresEvents(): any[] {
     },
     {
       id: 'lib-1623',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Corinthians',
       away: 'Rosario Central',
       date: '2026-08-20',
@@ -1198,14 +1311,14 @@ function generateLibertadoresEvents(): any[] {
     },
     {
       id: 'lib-1635',
-      round: 'Oitavas de Final',
+      round: 'Oitavas de Final - Volta',
       home: 'Independiente Valle',
       away: 'Deportes Tolima',
       date: '2026-08-25',
       time: '21:30',
       stadium: 'Estadio Banco Guayaquil',
       referee: 'CONMEBOL Libertadores',
-      broadcasters: ['A confirmar'],
+      broadcasters: ['Paramount+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1635'
     }
   ];
