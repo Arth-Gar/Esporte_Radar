@@ -1,4 +1,4 @@
-export type SportType = 'futebol' | 'libertadores' | 'basquete' | 'volei' | 'judo' | 'automobilismo' | 'tenis' | 'filantropia';
+export type SportType = 'futebol' | 'basquete' | 'volei' | 'judo' | 'automobilismo' | 'tenis' | 'filantropia';
 
 export interface SocialProject {
   id: string;
@@ -42,5 +42,21 @@ export interface ClubInfo {
   name: string;
   slug: string;
   logo: string;
+}
+
+export interface TeamNotificationConfig {
+  teamName: string;
+  enabled: boolean;
+  divisions: string[]; // List of divisions to receive notifications, e.g. ['Série A', 'Libertadores'] or [] for all
+  notifyBeforeMinutes: number; // 0 = at kickoff, 15 = 15m before, 30 = 30m before
+  soundEnabled?: boolean;
+}
+
+export interface UserPreferences {
+  favoriteTeams: string[]; // List of favorite team names
+  notificationConfigs: Record<string, TeamNotificationConfig>; // Keyed by team name
+  notificationsGlobalEnabled: boolean;
+  notifyBeforeMinutes: number; // default reminder window (0, 15, 30, 60)
+  onlyFavoritesInFeed: boolean;
 }
 

@@ -1021,7 +1021,7 @@ function generateLibertadoresEvents(): any[] {
 
     return {
       id: item.id,
-      sport: 'libertadores',
+      sport: 'futebol',
       competition: 'CONMEBOL Libertadores',
       division: 'Libertadores',
       round: item.round,

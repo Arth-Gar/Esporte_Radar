@@ -18,19 +18,28 @@ import {
   Clock,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Star,
+  Bell,
+  BellRing,
+  Watch
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FootballMatch, SportType } from './types';
+import { FootballMatch, SportType, UserPreferences } from './types';
 import { AdSlot, useAnchorAd } from './components/AdSlot';
 import { SocialProjectsView } from './components/SocialProjectsView';
 import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { Preloader } from './components/Preloader';
+import { TeamPreferencesModal } from './components/TeamPreferencesModal';
+import { 
+  getStoredPreferences, 
+  savePreferences, 
+  checkAndTriggerMatchAlerts 
+} from './utils/notificationService';
 import { SOCIAL_PROJECTS } from './data/socialProjects';
 
-const SPORTS_LIST: { id: SportType; label: string; icon: string; highlight?: boolean }[] = [
+const SPORTS_LIST: { id: SportType; label: string; icon: string }[] = [
   { id: 'futebol', label: 'Futebol', icon: '⚽' },
-  { id: 'libertadores', label: 'Libertadores', icon: '🏆', highlight: true },
   { id: 'basquete', label: 'Basquete', icon: '🏀' },
   { id: 'volei', label: 'Vôlei', icon: '🏐' },
   { id: 'judo', label: 'Judô', icon: '🥋' },
@@ -151,6 +160,70 @@ export default function App() {
   // Option to include finalized matches (excluídos por padrão)
   const [includeFinished, setIncludeFinished] = useState(false);
 
+  // User preferences for Favorite Teams & Notifications (Smartwatch & Phone)
+  const [preferences, setPreferences] = useState<UserPreferences>(() => getStoredPreferences());
+  const [showPreferencesModal, setShowPreferencesModal] = useState(false);
+  const [onlyFavoritesFilter, setOnlyFavoritesFilter] = useState(false);
+
+  // Update preferences and sync with localStorage
+  const handleUpdatePreferences = (newPrefs: UserPreferences) => {
+    setPreferences(newPrefs);
+    savePreferences(newPrefs);
+  };
+
+  // Quick toggle favorite for a specific team (directly from match card)
+  const handleToggleFavoriteTeam = (teamName: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const isFav = preferences.favoriteTeams.includes(teamName);
+    const newFavorites = isFav
+      ? preferences.favoriteTeams.filter(t => t !== teamName)
+      : [...preferences.favoriteTeams, teamName];
+
+    const newConfigs = { ...preferences.notificationConfigs };
+    if (!isFav && !newConfigs[teamName]) {
+      newConfigs[teamName] = {
+        teamName,
+        enabled: true,
+        divisions: [],
+        notifyBeforeMinutes: preferences.notifyBeforeMinutes || 15,
+        soundEnabled: true,
+      };
+    }
+
+    handleUpdatePreferences({
+      ...preferences,
+      favoriteTeams: newFavorites,
+      notificationConfigs: newConfigs,
+    });
+  };
+
+  // Helper to check if a match contains any favorite team
+  const isFavoriteMatch = (match: FootballMatch) => {
+    return preferences.favoriteTeams.some(fav => 
+      match.homeTeam.toLowerCase().includes(fav.toLowerCase()) || 
+      match.awayTeam.toLowerCase().includes(fav.toLowerCase())
+    );
+  };
+
+  // Helper to check if a team is favorite
+  const isTeamFavorite = (teamName: string) => {
+    return preferences.favoriteTeams.some(fav => 
+      teamName.toLowerCase().includes(fav.toLowerCase()) ||
+      fav.toLowerCase().includes(teamName.toLowerCase())
+    );
+  };
+
+  // Background check to trigger kickoff reminders on cellphone & smartwatch
+  useEffect(() => {
+    if (matches.length > 0) {
+      checkAndTriggerMatchAlerts(matches, preferences);
+      const interval = setInterval(() => {
+        checkAndTriggerMatchAlerts(matches, preferences);
+      }, 45000);
+      return () => clearInterval(interval);
+    }
+  }, [matches, preferences]);
+
   // Selected Match for the Live Hub Modal
   const [selectedMatch, setSelectedMatch] = useState<FootballMatch | null>(null);
   const [showMatchModalHelp, setShowMatchModalHelp] = useState(false);
@@ -219,24 +292,42 @@ export default function App() {
 
   // Helper to check if a match is CONMEBOL Libertadores
   const isLibertadoresMatch = (m: FootballMatch) => {
-    return (m.sport === 'libertadores') || 
-           (m.division && m.division.toLowerCase().includes('libertadores')) || 
+    return (m.division && m.division.toLowerCase().includes('libertadores')) || 
            ((m as any).competition && (m as any).competition.toLowerCase().includes('libertadores'));
   };
 
   // Filter lists derived from active sport
   const sportMatches = matches.filter(m => {
-    if (activeSport === 'libertadores') {
-      return isLibertadoresMatch(m);
-    }
-    if (activeSport === 'futebol') {
-      return (m.sport || 'futebol') === 'futebol' || isLibertadoresMatch(m);
-    }
     return (m.sport || 'futebol') === activeSport;
   });
 
   const broadcastersList = ['Tudo', ...Array.from(new Set(sportMatches.flatMap(m => m.broadcasters)))];
-  const divisionsList = ['Tudo', ...Array.from(new Set(sportMatches.map(m => m.division).filter(Boolean)))];
+  
+  // Natural football division ordering with Libertadores prominently featured
+  const preferredDivisionOrder = [
+    'Série A',
+    'Série B',
+    'Copa do Brasil',
+    'Libertadores',
+    'Série C',
+    'Série D',
+    'Feminino',
+    'Sub-20',
+    'Sub-17',
+    'Sub-15'
+  ];
+
+  const rawDivisions: string[] = Array.from(new Set(sportMatches.map(m => m.division).filter((d): d is string => Boolean(d))));
+  rawDivisions.sort((a: string, b: string) => {
+    const idxA = preferredDivisionOrder.indexOf(a);
+    const idxB = preferredDivisionOrder.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  const divisionsList: string[] = ['Tudo', ...rawDivisions];
   
   // Apply filtering rules
   const filteredMatches = sportMatches.filter(match => {
@@ -282,11 +373,21 @@ export default function App() {
     // Day of Month filter
     const matchesDay = selectedDay === 'Tudo' || matchDay === selectedDay;
 
-    return matchesSearch && matchesDivision && matchesBroadcaster && matchesStatus && matchesDay;
+    // Favorite team filter
+    const matchesFavoritesOnly = !onlyFavoritesFilter || isFavoriteMatch(match);
+
+    return matchesSearch && matchesDivision && matchesBroadcaster && matchesStatus && matchesDay && matchesFavoritesOnly;
   });
 
-  // Ordenar: Jogos da Série A primeiro, depois status: Ao Vivo (1º), Agendados (2º), Finalizados no final (3º), data e horário
+  // Ordenar: 1º Jogos de Times Favoritos (Fixados no Topo), 2º Jogos da Série A, 3º Status (Ao Vivo > Agendado > Finalizado), 4º Data e Horário
   const sortedMatches = [...filteredMatches].sort((a, b) => {
+    // Prioridade máxima: jogos dos times favoritos do usuário
+    const aFav = isFavoriteMatch(a);
+    const bFav = isFavoriteMatch(b);
+    if (aFav !== bFav) {
+      return aFav ? -1 : 1;
+    }
+
     const isSerieA = (div: string) => {
       const d = (div || '').toLowerCase();
       return d.includes('série a') || d.includes('serie a');
@@ -295,7 +396,7 @@ export default function App() {
     const isASerieA = isSerieA(a.division);
     const isBSerieA = isSerieA(b.division);
 
-    // Prioridade máxima: jogos da Série A
+    // Prioridade seguinte: jogos da Série A
     if (isASerieA !== isBSerieA) {
       return isASerieA ? -1 : 1;
     }
@@ -312,6 +413,7 @@ export default function App() {
   const liveCount = sportMatches.filter(m => m.status === 'ao_vivo').length;
   const scheduledCount = sportMatches.filter(m => m.status === 'agendado').length;
   const finishedCount = sportMatches.filter(m => m.status === 'finalizado').length;
+  const favoriteMatchesCount = sportMatches.filter(m => isFavoriteMatch(m)).length;
 
   // Format date correctly in Portuguese
   const formatBrazilianDate = (dateStr: string) => {
@@ -354,6 +456,9 @@ export default function App() {
 
   const getDivisionStyle = (div: string) => {
     const name = (div || '').toLowerCase();
+    if (name.includes('libertadores')) {
+      return 'bg-amber-950/80 text-amber-300 border border-amber-500/50';
+    }
     if (name.includes('série a') || name.includes('serie a')) {
       return 'bg-green-950/80 text-green-300 border border-green-700/40';
     }
@@ -420,11 +525,39 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="bg-[#020704]/60 px-4 py-2 border border-green-950/60 rounded flex items-center gap-2.5 shadow-inner">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative group">
+              <button
+                onClick={() => setShowPreferencesModal(true)}
+                title="receba a notificação dos times favoritos e divisões desejadas."
+                aria-label="receba a notificação dos times favoritos e divisões desejadas."
+                className="relative p-2 sm:px-2.5 sm:py-2 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-center"
+              >
+                <div className="relative flex items-center justify-center w-5 h-5">
+                  <Bell className="h-5 w-5 text-amber-300 group-hover:text-amber-200 transition-colors" />
+                  <Star className="h-2 w-2 fill-amber-400 text-amber-400 absolute top-1.5" />
+                </div>
+
+                {preferences.favoriteTeams.length > 0 && (
+                  <span className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-black font-mono font-black flex items-center justify-center shadow">
+                    {preferences.favoriteTeams.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Floating description on mouse hover */}
+              <div className="absolute right-0 top-full mt-2 hidden group-hover:flex flex-col items-end z-50 pointer-events-none whitespace-nowrap">
+                <div className="w-2 h-2 bg-slate-900 rotate-45 border-t border-l border-amber-500/40 mr-3 -mb-1"></div>
+                <div className="px-3 py-1.5 bg-slate-900/95 border border-amber-500/40 rounded-md text-[11px] font-medium text-amber-200 shadow-xl backdrop-blur-md">
+                  receba a notificação dos times favoritos e divisões desejadas.
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#020704]/60 px-3.5 py-2 border border-green-950/60 rounded flex items-center gap-2 shadow-inner hidden md:flex">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               <span className="text-xs font-semibold uppercase tracking-wider text-green-300">
-                {liveCount} {liveCount === 1 ? 'Jogo ao Vivo' : 'Jogos ao Vivo'}
+                {liveCount} {liveCount === 1 ? 'Ao Vivo' : 'Ao Vivo'}
               </span>
             </div>
             <button 
@@ -433,7 +566,7 @@ export default function App() {
               className="flex items-center gap-2 px-3 py-2 rounded bg-green-900/60 border border-green-800 hover:border-seagreen hover:text-white text-green-300 text-xs font-bold transition-all duration-200 cursor-pointer uppercase tracking-wider"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-              {refreshing ? 'Buscando...' : 'Recarregar'}
+              <span className="hidden sm:inline">{refreshing ? 'Buscando...' : 'Recarregar'}</span>
             </button>
           </div>
         </div>
@@ -448,9 +581,7 @@ export default function App() {
           {SPORTS_LIST.map(sport => {
             const count = sport.id === 'filantropia'
               ? SOCIAL_PROJECTS.length
-              : sport.id === 'libertadores'
-                ? matches.filter(m => isLibertadoresMatch(m)).length
-                : matches.filter(m => (m.sport || 'futebol') === sport.id).length;
+              : matches.filter(m => (m.sport || 'futebol') === sport.id).length;
             const isActive = activeSport === sport.id;
 
             return (
@@ -463,12 +594,8 @@ export default function App() {
                 }}
                 className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg shrink-0 transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wider ${
                   isActive
-                    ? sport.highlight 
-                      ? 'bg-amber-500 text-black shadow-md scale-102 ring-1 ring-amber-400 font-black'
-                      : 'bg-seagreen text-white shadow-sm scale-102 ring-1 ring-seagreen/40'
-                    : sport.highlight
-                      ? 'bg-amber-950/40 text-amber-300 border border-amber-500/30 hover:bg-amber-900/50 hover:text-white'
-                      : 'bg-[#081f13] text-emerald-300 hover:bg-[#0e2f1f] hover:text-white'
+                    ? 'bg-seagreen text-white shadow-sm scale-102 ring-1 ring-seagreen/40'
+                    : 'bg-[#081f13] text-emerald-300 hover:bg-[#0e2f1f] hover:text-white'
                 }`}
               >
                 <span className="text-sm">{sport.icon}</span>
@@ -476,7 +603,7 @@ export default function App() {
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
                     isActive 
-                      ? sport.highlight ? 'bg-black text-amber-400 font-bold' : 'bg-[#020704] text-seagreen font-bold'
+                      ? 'bg-[#020704] text-seagreen font-bold'
                       : 'bg-green-950/80 text-emerald-300'
                   }`}
                 >
@@ -490,17 +617,84 @@ export default function App() {
 
       {/* FILTER BAR & SEARCH PANEL (FOR BROADCAST SCHEDULES) */}
       {activeSport !== 'filantropia' && (
-        <section className="bg-[#05140d] border-b border-green-950/60 py-3.5 px-6 md:px-8 shrink-0">
-        <div className="max-w-7xl mx-auto space-y-3">
+        <section className="bg-[#05140d] border-b border-green-950/60 py-3 px-6 md:px-8 shrink-0">
+        <div className="max-w-7xl mx-auto space-y-2.5">
           
+          {/* Quick Division & Favorites Selector Pills for Futebol */}
+          {activeSport === 'futebol' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1 pt-0.5">
+              <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest shrink-0 mr-1 flex items-center gap-1">
+                Filtro Rápido:
+              </span>
+
+              {/* Quick Filter: Only Favorites */}
+              <button
+                type="button"
+                onClick={() => setOnlyFavoritesFilter(!onlyFavoritesFilter)}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-md shrink-0 transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider ${
+                  onlyFavoritesFilter
+                    ? 'bg-amber-500 text-black shadow-sm ring-1 ring-amber-400 font-black'
+                    : 'bg-amber-950/30 text-amber-300 border border-amber-500/40 hover:bg-amber-900/50 hover:text-white'
+                }`}
+                title="Filtrar para ver somente partidas dos meus times favoritados"
+              >
+                <Star className={`h-3 w-3 ${onlyFavoritesFilter ? 'fill-black text-black' : 'fill-amber-400 text-amber-400'}`} />
+                <span>Meus Times</span>
+                <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                  onlyFavoritesFilter ? 'bg-black text-amber-300 font-bold' : 'bg-black/50 text-amber-400'
+                }`}>
+                  {favoriteMatchesCount}
+                </span>
+              </button>
+
+              <span className="text-green-900 text-xs shrink-0">|</span>
+
+              {divisionsList.map(div => {
+                const isSelected = selectedDivision === div && !onlyFavoritesFilter;
+                const count = div === 'Tudo' ? sportMatches.length : sportMatches.filter(m => m.division === div).length;
+                const isLibertadores = div.toLowerCase().includes('libertadores');
+
+                return (
+                  <button
+                    key={div}
+                    type="button"
+                    onClick={() => {
+                      setSelectedDivision(div);
+                      if (onlyFavoritesFilter) setOnlyFavoritesFilter(false);
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-md shrink-0 transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider ${
+                      isSelected
+                        ? isLibertadores
+                          ? 'bg-amber-500 text-black shadow-sm ring-1 ring-amber-400 font-black'
+                          : 'bg-seagreen text-white shadow-sm ring-1 ring-seagreen/40 font-black'
+                        : isLibertadores
+                          ? 'bg-amber-950/40 text-amber-300 border border-amber-500/30 hover:bg-amber-900/50 hover:text-white'
+                          : 'bg-[#092215] text-slate-300 border border-green-950 hover:border-green-800 hover:text-white'
+                    }`}
+                  >
+                    {isLibertadores && <span>🏆</span>}
+                    <span>{div === 'Tudo' ? 'Todas Divisões' : div}</span>
+                    <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                      isSelected 
+                        ? isLibertadores ? 'bg-black text-amber-300 font-bold' : 'bg-black/60 text-green-300 font-bold'
+                        : 'bg-black/40 text-green-400'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Collapsible Header Toggle */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-green-950/40 pb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-green-950/40 pt-2">
             <button 
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-2 text-xs font-bold text-emerald-300 hover:text-white uppercase tracking-widest cursor-pointer select-none"
             >
               <SlidersHorizontal className="h-4 w-4 text-seagreen" />
-              <span>Filtros e Busca</span>
+              <span>Mais Filtros e Busca</span>
               {showFilters ? <ChevronUp className="h-4 w-4 text-seagreen" /> : <ChevronDown className="h-4 w-4 text-seagreen" />}
             </button>
             
@@ -747,8 +941,8 @@ export default function App() {
           <SocialProjectsView />
         ) : (
           <>
-            {/* CONMEBOL Libertadores Official Tournament Banner */}
-            {activeSport === 'libertadores' && (
+            {/* CONMEBOL Libertadores Official Tournament Banner when Libertadores is selected */}
+            {activeSport === 'futebol' && (selectedDivision === 'Libertadores' || selectedDivision.toLowerCase().includes('libertadores')) && (
               <div className="bg-gradient-to-r from-amber-950/60 via-[#101c13] to-amber-950/60 border border-amber-500/40 rounded-xl p-4 md:p-5 shadow-lg relative overflow-hidden">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-3.5">
@@ -864,6 +1058,9 @@ export default function App() {
                   const dateInfo = formatBrazilianDate(match.date);
                   const isLive = match.status === 'ao_vivo';
                   const isFinished = match.status === 'finalizado';
+                  const hasFavorite = isFavoriteMatch(match);
+                  const isHomeFav = isTeamFavorite(match.homeTeam);
+                  const isAwayFav = isTeamFavorite(match.awayTeam);
 
                   const showMiddleAd = idx === Math.floor(sortedMatches.length / 2) && sortedMatches.length > 2;
 
@@ -878,43 +1075,80 @@ export default function App() {
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ duration: 0.2 }}
                       onClick={() => setSelectedMatch(match)}
-                      className="group flex flex-col bg-[oklch(85.2%_0.199_91.936)]/[0.04] border border-[oklch(85.2%_0.199_91.936)]/35 hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] hover:border-[oklch(0.77_0.16_199.2)]/80 rounded-lg p-3 lg:p-2.5 transition-all duration-200 cursor-pointer relative shadow-[0_2px_8px_rgba(0,0,0,0.15)] hover:shadow-md gap-2"
+                      className={`group flex flex-col rounded-lg p-3 lg:p-2.5 transition-all duration-200 cursor-pointer relative shadow-[0_2px_8px_rgba(0,0,0,0.15)] hover:shadow-md gap-2 ${
+                        hasFavorite
+                          ? 'bg-amber-950/15 border-2 border-amber-500/60 hover:border-amber-400 hover:bg-amber-950/25 shadow-amber-950/30'
+                          : 'bg-[oklch(85.2%_0.199_91.936)]/[0.04] border border-[oklch(85.2%_0.199_91.936)]/35 hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] hover:border-[oklch(0.77_0.16_199.2)]/80'
+                      }`}
                     >
                       {/* Decorative live bar */}
                       {isLive && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 rounded-l"></div>
+                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-red-500 rounded-l"></div>
                       )}
 
-                      {/* Top Meta Header: Date/Time + Division Tag + Broadcasters */}
-                      <div className="flex items-center justify-between gap-2 border-b border-green-900/20 pb-1.5">
-                        {/* Date, Time & Division Tag (Moved higher up to avoid crowding team names) */}
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-bold text-white uppercase tracking-tight">
-                              {dateInfo.shortDate} às {match.time}
-                            </span>
-                            <span className="text-[9px] text-emerald-300 font-mono uppercase tracking-wider">
-                              {isLive ? '• AO VIVO' : `• ${dateInfo.dayOfWeek}`}
-                            </span>
-                          </div>
-                          <span className={`px-1.5 py-0.5 text-[8px] font-bold rounded uppercase tracking-wider ${getDivisionStyle(match.division)}`}>
-                            {match.division}
+                      {/* Top Meta Header: 20% Date/Time | 20% Day of Week | 20% Division | 40% Broadcasters */}
+                      <div className="flex items-center w-full gap-1 border-b border-green-900/20 pb-1.5 text-left">
+                        {/* 20% Data e Hora */}
+                        <div className="w-[20%] shrink-0 min-w-0 pr-1">
+                          <span className="text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-tight truncate block" title={`${dateInfo.shortDate} às ${match.time}`}>
+                            {dateInfo.shortDate} {match.time}
                           </span>
                         </div>
 
-                        {/* Broadcaster channels */}
-                        <div className="flex items-center gap-1 flex-wrap shrink-0">
-                          {match.broadcasters.map((b, i) => {
+                        {/* 20% Dia da Semana */}
+                        <div className="w-[20%] shrink-0 min-w-0 pr-1">
+                          <span className="text-[9px] sm:text-[10px] text-emerald-300 font-mono uppercase tracking-wider truncate block" title={isLive ? 'Ao Vivo' : dateInfo.dayOfWeek}>
+                            {isLive ? (
+                              <span className="text-red-400 font-bold animate-pulse flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                                AO VIVO
+                              </span>
+                            ) : (
+                              dateInfo.dayOfWeek
+                            )}
+                          </span>
+                        </div>
+
+                        {/* 20% Divisão & Favorito */}
+                        <div className="w-[20%] shrink-0 min-w-0 pr-1 flex items-center gap-1">
+                          <span 
+                            className={`px-1.5 py-0.5 text-[8px] font-bold rounded uppercase tracking-wider truncate block ${getDivisionStyle(match.division)}`}
+                            title={match.division}
+                          >
+                            {match.division}
+                          </span>
+                          {hasFavorite && (
+                            <span 
+                              className="px-1 py-0.5 text-[7px] font-black rounded uppercase tracking-wider bg-amber-500 text-black shadow-sm shrink-0 flex items-center gap-0.5" 
+                              title="Meu Time Favorito"
+                            >
+                              <Star className="h-2 w-2 fill-black text-black" />
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 40% Canais de Transmissão (empilhados / resumidos com +) */}
+                        <div className="w-[40%] shrink-0 min-w-0 flex items-center justify-end gap-1 flex-wrap">
+                          {match.broadcasters.slice(0, 2).map((b, i) => {
                             const style = getBroadcasterStyle(b);
                             return (
                               <div 
                                 key={i} 
-                                className={`px-1.5 py-0.5 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-300 border border-green-800/30 ${style.bg}`}
+                                className={`px-1.5 py-0.5 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-300 border border-green-800/30 truncate max-w-[85px] sm:max-w-[120px] ${style.bg}`}
+                                title={b}
                               >
                                 {b}
                               </div>
                             );
                           })}
+                          {match.broadcasters.length > 2 && (
+                            <div 
+                              className="px-1.5 py-0.5 bg-green-950/90 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-400 border border-green-800/40 shrink-0"
+                              title={`Mais canais: ${match.broadcasters.slice(2).join(', ')} (clique no card para ver detalhes)`}
+                            >
+                              +{match.broadcasters.length - 2}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -924,8 +1158,22 @@ export default function App() {
                         <div className="flex-1 flex items-center justify-between md:justify-center gap-1.5 sm:gap-3 bg-[#020704]/30 md:bg-transparent p-2 md:p-0 rounded-lg min-w-0">
                           
                           {/* Home team */}
-                          <div className="flex items-center gap-1.5 sm:gap-2 w-[45%] md:w-5/12 min-w-0 justify-end">
-                            <span className="text-[11px] sm:text-xs md:text-sm font-bold text-white text-right line-clamp-2 break-words leading-tight min-w-0">
+                          <div className="flex items-center gap-1 sm:gap-2 w-[45%] md:w-5/12 min-w-0 justify-end">
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleFavoriteTeam(match.homeTeam, e)}
+                              className={`p-1 rounded transition-all cursor-pointer shrink-0 ${
+                                isHomeFav 
+                                  ? 'text-amber-400 hover:text-amber-300 scale-110' 
+                                  : 'text-slate-600 hover:text-amber-400 opacity-40 hover:opacity-100 hover:scale-110'
+                              }`}
+                              title={isHomeFav ? `Remover ${match.homeTeam} dos favoritos` : `Favoritar ${match.homeTeam} e receber alertas`}
+                            >
+                              <Star className={`h-3.5 w-3.5 ${isHomeFav ? 'fill-amber-400 text-amber-400' : 'text-slate-400'}`} />
+                            </button>
+                            <span className={`text-[11px] sm:text-xs md:text-sm font-bold text-right line-clamp-2 break-words leading-tight min-w-0 ${
+                              isHomeFav ? 'text-amber-300 font-extrabold' : 'text-white'
+                            }`}>
                               {match.homeTeam}
                             </span>
                             <TeamLogo teamName={match.homeTeam} logoUrl={match.homeTeamLogo} size="md" />
@@ -948,11 +1196,25 @@ export default function App() {
                           </div>
 
                           {/* Away team */}
-                          <div className="flex items-center gap-1.5 sm:gap-2 w-[45%] md:w-5/12 min-w-0 justify-start">
+                          <div className="flex items-center gap-1 sm:gap-2 w-[45%] md:w-5/12 min-w-0 justify-start">
                             <TeamLogo teamName={match.awayTeam} logoUrl={match.awayTeamLogo} size="md" />
-                            <span className="text-[11px] sm:text-xs md:text-sm font-bold text-white text-left line-clamp-2 break-words leading-tight min-w-0">
+                            <span className={`text-[11px] sm:text-xs md:text-sm font-bold text-left line-clamp-2 break-words leading-tight min-w-0 ${
+                              isAwayFav ? 'text-amber-300 font-extrabold' : 'text-white'
+                            }`}>
                               {match.awayTeam}
                             </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleFavoriteTeam(match.awayTeam, e)}
+                              className={`p-1 rounded transition-all cursor-pointer shrink-0 ${
+                                isAwayFav 
+                                  ? 'text-amber-400 hover:text-amber-300 scale-110' 
+                                  : 'text-slate-600 hover:text-amber-400 opacity-40 hover:opacity-100 hover:scale-110'
+                              }`}
+                              title={isAwayFav ? `Remover ${match.awayTeam} dos favoritos` : `Favoritar ${match.awayTeam} e receber alertas`}
+                            >
+                              <Star className={`h-3.5 w-3.5 ${isAwayFav ? 'fill-amber-400 text-amber-400' : 'text-slate-400'}`} />
+                            </button>
                           </div>
 
                         </div>
@@ -967,12 +1229,21 @@ export default function App() {
                             <span className="inline-block px-3 py-1 bg-white/5 text-slate-500 text-[10px] font-bold rounded border border-white/15 uppercase tracking-wider">
                               Detalhes
                             </span>
+                          ) : hasFavorite ? (
+                            <span className="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 group-hover:bg-amber-500 group-hover:text-black group-hover:border-amber-400 text-[10px] font-bold rounded border border-amber-500/40 transition-all uppercase tracking-wider">
+                              Ver Detalhes
+                            </span>
                           ) : (
                             <span className="inline-block px-3 py-1 bg-white/5 text-[oklch(85.2%_0.199_91.936)] group-hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] group-hover:text-cyan-100 group-hover:border-[oklch(0.77_0.16_199.2)] text-[10px] font-bold rounded border border-[oklch(85.2%_0.199_91.936)]/30 transition-all uppercase tracking-wider">
                               Transmitir
                             </span>
                           )}
                         </div>
+                      </div>
+
+                      {/* Small Bottom Indicator Arrow for Mobile Expand UX */}
+                      <div className="flex items-center justify-center -mb-1 -mt-0.5 pt-0.5 border-t border-green-900/20 text-green-500/50 group-hover:text-seagreen transition-colors">
+                        <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:translate-y-0.5" />
                       </div>
 
                     </motion.div>
@@ -1231,6 +1502,57 @@ export default function App() {
                   <span className="font-bold text-seagreen">Dica:</span> Ao clicar em uma das plataformas listadas acima, o navegador abrirá diretamente o site oficial correspondente. Certifique-se de possuir login ou assinatura ativa para acompanhar a partida com melhor qualidade.
                 </div>
 
+                {/* Team Favoriting & Smartwatch Alerts in Modal */}
+                <div className="p-4 rounded-lg bg-[#031109] border border-amber-500/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Star className="h-3.5 w-3.5 fill-amber-400" />
+                      Favoritar Times desta Partida
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelectedMatch(null);
+                        setShowPreferencesModal(true);
+                      }}
+                      className="text-[10px] text-amber-400 hover:text-white font-bold uppercase tracking-wider flex items-center gap-1 underline cursor-pointer"
+                    >
+                      <Watch className="h-3 w-3 text-sky-400" /> Configurar Alertas Smartwatch
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleToggleFavoriteTeam(selectedMatch.homeTeam)}
+                      className={`p-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                        isTeamFavorite(selectedMatch.homeTeam)
+                          ? 'bg-amber-950/70 border-amber-500 text-amber-300 shadow-sm'
+                          : 'bg-[#06180f] border-green-900/40 text-slate-300 hover:text-white hover:border-amber-500/50'
+                      }`}
+                    >
+                      <span className="truncate">{selectedMatch.homeTeam}</span>
+                      <span className="flex items-center gap-1 shrink-0 text-[10px] font-mono">
+                        <Star className={`h-3 w-3 ${isTeamFavorite(selectedMatch.homeTeam) ? 'fill-amber-400 text-amber-400' : 'text-slate-500'}`} />
+                        {isTeamFavorite(selectedMatch.homeTeam) ? 'Favoritado' : 'Favoritar'}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleFavoriteTeam(selectedMatch.awayTeam)}
+                      className={`p-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                        isTeamFavorite(selectedMatch.awayTeam)
+                          ? 'bg-amber-950/70 border-amber-500 text-amber-300 shadow-sm'
+                          : 'bg-[#06180f] border-green-900/40 text-slate-300 hover:text-white hover:border-amber-500/50'
+                      }`}
+                    >
+                      <span className="truncate">{selectedMatch.awayTeam}</span>
+                      <span className="flex items-center gap-1 shrink-0 text-[10px] font-mono">
+                        <Star className={`h-3 w-3 ${isTeamFavorite(selectedMatch.awayTeam) ? 'fill-amber-400 text-amber-400' : 'text-slate-500'}`} />
+                        {isTeamFavorite(selectedMatch.awayTeam) ? 'Favoritado' : 'Favoritar'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={() => setSelectedMatch(null)}
@@ -1246,6 +1568,15 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* TEAM PREFERENCES & SMARTWATCH NOTIFICATIONS MODAL */}
+      <TeamPreferencesModal
+        isOpen={showPreferencesModal}
+        onClose={() => setShowPreferencesModal(false)}
+        matches={matches}
+        preferences={preferences}
+        onUpdatePreferences={handleUpdatePreferences}
+      />
 
       {/* FLOATING PWA / ADD TO HOME SCREEN PROMPT */}
       <InstallPwaPrompt />
