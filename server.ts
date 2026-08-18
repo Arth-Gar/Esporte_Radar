@@ -388,6 +388,13 @@ const CLUB_MAPPING: { [key: string]: { name: string; slug: string; logo: string 
   'sporting cristal': { name: 'Sporting Cristal', slug: 'sporting-cristal', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10108.png' },
   'melgar': { name: 'FBC Melgar', slug: 'melgar', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10109.png' },
   'always ready': { name: 'Always Ready', slug: 'always-ready', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10110.png' },
+  'tolima': { name: 'Deportes Tolima', slug: 'deportes-tolima', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10111.png' },
+  'deportes tolima': { name: 'Deportes Tolima', slug: 'deportes-tolima', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10111.png' },
+  'univ católica': { name: 'Universidad Católica', slug: 'universidad-catolica', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10112.png' },
+  'universidad catolica': { name: 'Universidad Católica', slug: 'universidad-catolica', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10112.png' },
+  'universidad católica': { name: 'Universidad Católica', slug: 'universidad-catolica', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10112.png' },
+  'univ catolica': { name: 'Universidad Católica', slug: 'universidad-catolica', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10112.png' },
+  'ind. del valle': { name: 'Independiente del Valle', slug: 'idv', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10089.png' },
   'independiente rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' },
   'csir': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' },
   'rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' }
@@ -943,98 +950,263 @@ function generateOtherSportsEvents(): any[] {
   ];
 }
 
-// Generate curated schedule for CONMEBOL Libertadores 2026 (Mata-mata / Oitavas e Quartas)
+// Cache for CONMEBOL scraped matches
+let cachedLibertadoresGames: any[] = [];
+let lastLibertadoresFetchTime = 0;
+
+// Broadcasters mapper helper for CONMEBOL Libertadores matches in Brazil
+function getLibertadoresBroadcasters(homeName: string, awayName: string): string[] {
+  const combined = `${homeName} ${awayName}`.toLowerCase();
+  if (combined.includes('fluminense') || combined.includes('rivadavia')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('flamengo') || combined.includes('cruzeiro')) {
+    return ['TV Globo', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('palmeiras') || combined.includes('cerro')) {
+    return ['ESPN', 'Disney+', 'Paramount+'];
+  }
+  if (combined.includes('corinthians') || combined.includes('rosario')) {
+    return ['Paramount+', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('mirassol') || combined.includes('ldu')) {
+    return ['ESPN', 'Disney+'];
+  }
+  return ['A confirmar'];
+}
+
+// Scrapes live match view pages directly from CONMEBOL (e.g. gol.conmebol.com/libertadores/pt-br/fixture/view/:id)
+async function scrapeConmebolLibertadores(forceRefresh: boolean = false): Promise<any[]> {
+  const now = Date.now();
+  if (!forceRefresh && cachedLibertadoresGames.length > 0 && (now - lastLibertadoresFetchTime < 10 * 60 * 1000)) {
+    return cachedLibertadoresGames;
+  }
+
+  // Active fixture IDs for Oitavas de Final on CONMEBOL
+  const fixtureIds = [1620, 1605, 1638, 1626, 1629, 1632, 1641, 1623, 1635, 1647, 1602, 1611, 1644];
+  
+  try {
+    const fetchPromises = fixtureIds.map(async (id) => {
+      try {
+        const url = `https://gol.conmebol.com/libertadores/pt-br/fixture/view/${id}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        const html = await res.text();
+        const dm = html.match(/data-drupal-selector="drupal-settings-json">([\s\S]*?)<\/script>/);
+        if (!dm) return null;
+        const d = JSON.parse(dm[1]);
+        const target = d?.metadata?.targeting;
+        if (!target || !target.fixture_id || !target.fixture_home_team_title || target.fixture_home_team_title === 'TBD') return null;
+
+        // Exact stadium / venue extracted from page
+        const venueMatch = html.match(/class=["']m-match-centre-hero__venue["'][^>]*>([^<]+)<\/div>/i) ||
+                           html.match(/class=["']m-match-fixture-details__stadium["'][^>]*>([^<]+)<\/div>/i);
+        const venue = venueMatch ? venueMatch[1].trim() : 'Estádio a confirmar';
+
+        // Exact referee / árbitro extracted from page
+        const refereeMatch = html.match(/Árbitro<\/span>\s*<span[^>]*>([^<]+)<\/span>/i) ||
+                             html.match(/class="m-match-fixture-details__list-item-value">([^<]+)<\/span>/i);
+        const referee = refereeMatch ? refereeMatch[1].trim() : '';
+
+        const crestVersion = d?.clubcastCore?.dataPlatform?.crestVersion || '2026040801';
+        const homeLogo = target.fixture_home_team_id
+          ? `https://gol-cdn.conmebol.com/icons/team/light/3x/id/${target.fixture_home_team_id}.png?version=${crestVersion}`
+          : getClubDetails(target.fixture_home_team_title).logo;
+        const awayLogo = target.fixture_away_team_id
+          ? `https://gol-cdn.conmebol.com/icons/team/light/3x/id/${target.fixture_away_team_id}.png?version=${crestVersion}`
+          : getClubDetails(target.fixture_away_team_title).logo;
+
+        // Date & Time extraction from fixture title e.g. "Universidad Católica vs Estudiantes (Ter, 18 Ago 2026 - 21:30)"
+        let dateStr = '';
+        let timeStr = '21:30';
+        const titleMatch = target.fixture_title?.match(/\(([A-Za-z]{3}),\s*(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})\s*-\s*(\d{2}:\d{2})\)/);
+        if (titleMatch) {
+          const months: Record<string, string> = { 'Jan': '01', 'Fev': '02', 'Mar': '03', 'Abr': '04', 'Mai': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Set': '09', 'Out': '10', 'Nov': '11', 'Dez': '12' };
+          const day = titleMatch[2].padStart(2, '0');
+          const month = months[titleMatch[3]] || '08';
+          const year = titleMatch[4];
+          dateStr = `${year}-${month}-${day}`;
+          timeStr = titleMatch[5];
+        } else if (target.fixture_date) {
+          const dt = new Date(target.fixture_date * 1000);
+          dateStr = dt.toISOString().split('T')[0];
+        }
+
+        const homeName = target.fixture_home_team_title.trim();
+        const awayName = target.fixture_away_team_title.trim();
+        const broadcasters = getLibertadoresBroadcasters(homeName, awayName);
+
+        return {
+          id: `lib-${target.fixture_id}`,
+          sport: 'futebol',
+          competition: 'CONMEBOL Libertadores',
+          division: 'Libertadores',
+          round: target.fixture_stage_title === '8th Finals' ? 'Oitavas de Final' : (target.fixture_stage_title || 'Oitavas de Final'),
+          homeTeam: homeName,
+          homeTeamSlug: getClubDetails(homeName).slug,
+          homeTeamLogo: homeLogo,
+          awayTeam: awayName,
+          awayTeamSlug: getClubDetails(awayName).slug,
+          awayTeamLogo: awayLogo,
+          date: dateStr,
+          time: timeStr,
+          stadium: venue,
+          referee: referee,
+          broadcasters: broadcasters,
+          transmissionDetails: getTransmissionDetails(broadcasters),
+          transmissionUrl: (broadcasters.some((b: string) => b.toLowerCase().includes('disney')))
+            ? 'https://www.disneyplus.com/'
+            : (broadcasters.some((b: string) => b.toLowerCase().includes('espn')))
+            ? 'https://www.espn.com.br/watch/'
+            : (broadcasters.some((b: string) => b.toLowerCase().includes('paramount')))
+            ? 'https://www.paramountplus.com/'
+            : (broadcasters.some((b: string) => b.toLowerCase().includes('globo')))
+            ? 'https://globoplay.globo.com/'
+            : 'https://www.disneyplus.com/',
+          matchViewUrl: url,
+          status: 'agendado',
+          scraped: true
+        };
+      } catch (err) {
+        return null;
+      }
+    });
+
+    const scraped = (await Promise.all(fetchPromises)).filter(Boolean);
+    if (scraped.length > 0) {
+      cachedLibertadoresGames = scraped;
+      lastLibertadoresFetchTime = Date.now();
+      return scraped;
+    }
+  } catch (err) {
+    console.error('Erro na raspagem CONMEBOL:', err);
+  }
+
+  if (cachedLibertadoresGames.length > 0) {
+    return cachedLibertadoresGames;
+  }
+
+  return generateLibertadoresEvents();
+}
+
+// Generate curated schedule for CONMEBOL Libertadores 2026 (Mata-mata / Oitavas de Final)
 function generateLibertadoresEvents(): any[] {
   const libList = [
     {
-      id: 'lib-csir-flu',
-      round: 'Oitavas de Final - Ida',
+      id: 'lib-1620',
+      round: 'Oitavas de Final',
       home: 'Independiente Rivadavia',
       away: 'Fluminense',
       date: '2026-08-18',
       time: '19:00',
-      stadium: 'Estadio Malvinas Argentinas - Mendoza (ARG)',
-      broadcasters: ['ESPN', 'Disney+']
+      stadium: 'Estadio Malvinas Argentinas',
+      referee: 'Andrés José Rojas Noguera',
+      broadcasters: ['ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1620'
     },
     {
-      id: 'lib-flu-csir-volta',
-      round: 'Oitavas de Final - Volta',
-      home: 'Fluminense',
-      away: 'Independiente Rivadavia',
-      date: '2026-08-25',
-      time: '19:00',
-      stadium: 'Maracanã - Rio de Janeiro (RJ)',
-      broadcasters: ['ESPN', 'Disney+']
-    },
-    {
-      id: 'lib-1',
-      round: 'Oitavas de Final - Ida',
-      home: 'Flamengo',
-      away: 'Olimpia',
+      id: 'lib-1605',
+      round: 'Oitavas de Final',
+      home: 'Deportes Tolima',
+      away: 'Independiente Valle',
       date: '2026-08-18',
       time: '21:30',
-      stadium: 'Maracanã - Rio de Janeiro (RJ)',
-      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+']
+      stadium: 'Estadio Manuel Murillo Toro',
+      referee: 'Wilton Pereira Sampaio',
+      broadcasters: ['A confirmar'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1605'
     },
     {
-      id: 'lib-2',
-      round: 'Oitavas de Final - Ida',
-      home: 'River Plate',
+      id: 'lib-1638',
+      round: 'Oitavas de Final',
+      home: 'Universidad Católica',
+      away: 'Estudiantes',
+      date: '2026-08-18',
+      time: '21:30',
+      stadium: 'Claro Arena',
+      referee: 'Wilmar Alexander Roldán Pérez',
+      broadcasters: ['A confirmar'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1638'
+    },
+    {
+      id: 'lib-1626',
+      round: 'Oitavas de Final',
+      home: 'Cerro Porteño',
       away: 'Palmeiras',
       date: '2026-08-19',
-      time: '21:30',
-      stadium: 'Monumental de Núñez - Buenos Aires (ARG)',
-      broadcasters: ['ESPN', 'Disney+', 'Paramount+']
+      time: '19:00',
+      stadium: 'Estadio ueno La Nueva Olla',
+      referee: 'Facundo Raúl Tello Figueroa',
+      broadcasters: ['ESPN', 'Disney+', 'Paramount+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1626'
     },
     {
-      id: 'lib-3',
-      round: 'Oitavas de Final - Ida',
-      home: 'Botafogo',
-      away: 'Nacional-URU',
+      id: 'lib-1629',
+      round: 'Oitavas de Final',
+      home: 'Coquimbo Unido',
+      away: 'Platense',
+      date: '2026-08-19',
+      time: '19:00',
+      stadium: 'Estadio Municipal Francisco Sánchez Rumoroso',
+      referee: 'Roberto Bruno Pérez Gutierrez',
+      broadcasters: ['A confirmar'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1629'
+    },
+    {
+      id: 'lib-1632',
+      round: 'Oitavas de Final',
+      home: 'Flamengo',
+      away: 'Cruzeiro',
+      date: '2026-08-19',
+      time: '21:30',
+      stadium: 'Estadio Jornalista Mário Filho (Maracanã)',
+      referee: 'Gustavo Adrián Tejera Capo',
+      broadcasters: ['TV Globo', 'ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1632'
+    },
+    {
+      id: 'lib-1641',
+      round: 'Oitavas de Final',
+      home: 'LDU Quito',
+      away: 'Mirassol',
       date: '2026-08-20',
       time: '19:00',
-      stadium: 'Nilton Santos (Engenhão) - Rio de Janeiro (RJ)',
-      broadcasters: ['Paramount+', 'ESPN', 'Disney+']
+      stadium: 'Estadio Rodrigo Paz Delgado',
+      referee: 'Yael Falcón Pérez',
+      broadcasters: ['ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1641'
     },
     {
-      id: 'lib-4',
-      round: 'Oitavas de Final - Ida',
-      home: 'São Paulo',
-      away: 'LDU Quito',
+      id: 'lib-1623',
+      round: 'Oitavas de Final',
+      home: 'Corinthians',
+      away: 'Rosario Central',
       date: '2026-08-20',
       time: '21:30',
-      stadium: 'MorumBIS - São Paulo (SP)',
-      broadcasters: ['TV Globo', 'ESPN', 'Disney+']
+      stadium: 'Neo Química Arena',
+      referee: 'Alexis Herrera',
+      broadcasters: ['Paramount+', 'ESPN', 'Disney+'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1623'
     },
     {
-      id: 'lib-5',
-      round: 'Oitavas de Final - Volta',
-      home: 'Palmeiras',
-      away: 'River Plate',
-      date: '2026-08-26',
+      id: 'lib-1635',
+      round: 'Oitavas de Final',
+      home: 'Independiente Valle',
+      away: 'Deportes Tolima',
+      date: '2026-08-25',
       time: '21:30',
-      stadium: 'Allianz Parque - São Paulo (SP)',
-      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+']
-    },
-    {
-      id: 'lib-6',
-      round: 'Oitavas de Final - Volta',
-      home: 'Olimpia',
-      away: 'Flamengo',
-      date: '2026-08-27',
-      time: '21:30',
-      stadium: 'Defensores del Chaco - Assunção (PAR)',
-      broadcasters: ['ESPN', 'Disney+', 'Paramount+']
-    },
-    {
-      id: 'lib-7',
-      round: 'Oitavas de Final - Volta',
-      home: 'Atlético-MG',
-      away: 'San Lorenzo',
-      date: '2026-08-27',
-      time: '19:00',
-      stadium: 'Arena MRV - Belo Horizonte (MG)',
-      broadcasters: ['Paramount+', 'Disney+']
+      stadium: 'Estadio Banco Guayaquil',
+      referee: 'CONMEBOL Libertadores',
+      broadcasters: ['A confirmar'],
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1635'
     }
   ];
 
@@ -1057,6 +1229,7 @@ function generateLibertadoresEvents(): any[] {
       date: item.date,
       time: item.time || 'A confirmar',
       stadium: item.stadium?.trim() || 'A confirmar',
+      referee: item.referee || '',
       broadcasters: item.broadcasters && item.broadcasters.length > 0 ? item.broadcasters : ['A confirmar'],
       transmissionDetails: getTransmissionDetails(item.broadcasters || []),
       transmissionUrl: (item.broadcasters && item.broadcasters.some((b: string) => b.toLowerCase().includes('disney')))
@@ -1068,6 +1241,7 @@ function generateLibertadoresEvents(): any[] {
         : (item.broadcasters && item.broadcasters.some((b: string) => b.toLowerCase().includes('globo')))
         ? 'https://globoplay.globo.com/'
         : 'https://www.disneyplus.com/',
+      matchViewUrl: item.matchViewUrl,
       status: 'agendado',
       scraped: false
     };
@@ -1383,7 +1557,7 @@ app.get('/api/jogos', async (req, res) => {
   try {
     const forceRefresh = req.query.refresh === 'true';
     const scrapedCBF = await scrapeCBFGames(forceRefresh);
-    const libertadoresMatches = generateLibertadoresEvents();
+    const libertadoresMatches = await scrapeConmebolLibertadores(forceRefresh);
     const otherSports = generateOtherSportsEvents();
     const fallback = generateFallbackGames();
     

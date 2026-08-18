@@ -22,7 +22,8 @@ import {
   Star,
   Bell,
   BellRing,
-  Watch
+  Watch,
+  Shield
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FootballMatch, SportType, UserPreferences } from './types';
@@ -1485,10 +1486,29 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Stadium details */}
-                <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-green-400 bg-[#05140d]/60 px-3 py-1.5 rounded border border-green-950/40">
-                  <MapPin className="h-3 w-3 text-green-500" />
-                  <span>Estádio: <strong className="text-white">{selectedMatch.stadium || 'A confirmar'}</strong></span>
+                {/* Stadium & Referee details */}
+                <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono">
+                  <div className="inline-flex items-center gap-1.5 text-green-400 bg-[#05140d]/80 px-3 py-1.5 rounded border border-green-950/40">
+                    <MapPin className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                    <span>Estádio: <strong className="text-white">{selectedMatch.stadium || 'A confirmar'}</strong></span>
+                  </div>
+                  {selectedMatch.referee && (
+                    <div className="inline-flex items-center gap-1.5 text-green-400 bg-[#05140d]/80 px-3 py-1.5 rounded border border-green-950/40">
+                      <Shield className="h-3.5 w-3.5 text-seagreen shrink-0" />
+                      <span>Árbitro: <strong className="text-white">{selectedMatch.referee}</strong></span>
+                    </div>
+                  )}
+                  {selectedMatch.matchViewUrl && (
+                    <a
+                      href={selectedMatch.matchViewUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-amber-300 hover:text-amber-200 bg-amber-950/40 hover:bg-amber-900/60 px-3 py-1.5 rounded border border-amber-800/40 transition-colors"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <span>Súmula CONMEBOL</span>
+                    </a>
+                  )}
                 </div>
 
               </div>

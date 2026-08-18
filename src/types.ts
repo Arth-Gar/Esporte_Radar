@@ -36,6 +36,8 @@ export interface FootballMatch {
   status: 'agendado' | 'ao_vivo' | 'finalizado';
   scraped: boolean;
   category?: string;
+  referee?: string;
+  matchViewUrl?: string;
 }
 
 export interface ClubInfo {

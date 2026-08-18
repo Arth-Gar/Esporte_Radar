@@ -95,7 +95,7 @@ function getOtherSportsEvents() {
 function getLibertadoresEvents() {
   return [
     {
-      id: 'lib-csir-flu',
+      id: 'lib-csir-flu-ida',
       sport: 'futebol',
       homeTeam: 'Independiente Rivadavia',
       homeTeamLogo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801',
@@ -104,8 +104,36 @@ function getLibertadoresEvents() {
       date: '2026-08-18',
       time: '19:00',
       division: 'Libertadores',
-      stadium: 'Estadio Malvinas Argentinas - Mendoza (ARG)',
+      stadium: 'Estadio Malvinas Argentinas',
       broadcasters: ['ESPN', 'Disney+'],
+      status: 'agendado'
+    },
+    {
+      id: 'lib-tol-idv-ida',
+      sport: 'futebol',
+      homeTeam: 'Deportes Tolima',
+      homeTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10111.png',
+      awayTeam: 'Independiente del Valle',
+      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10089.png',
+      date: '2026-08-18',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Estadio Manuel Murillo Toro',
+      broadcasters: ['A confirmar'],
+      status: 'agendado'
+    },
+    {
+      id: 'lib-uc-est-ida',
+      sport: 'futebol',
+      homeTeam: 'Universidad Católica',
+      homeTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10112.png',
+      awayTeam: 'Estudiantes de La Plata',
+      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10091.png',
+      date: '2026-08-18',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Claro Arena',
+      broadcasters: ['A confirmar'],
       status: 'agendado'
     },
     {
@@ -123,17 +151,31 @@ function getLibertadoresEvents() {
       status: 'agendado'
     },
     {
-      id: 'lib-1',
+      id: 'lib-idv-tol-volta',
       sport: 'futebol',
-      homeTeam: 'Flamengo',
-      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
-      awayTeam: 'Olimpia',
-      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10080.png',
-      date: '2026-08-18',
+      homeTeam: 'Independiente del Valle',
+      homeTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10089.png',
+      awayTeam: 'Deportes Tolima',
+      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10111.png',
+      date: '2026-08-25',
       time: '21:30',
       division: 'Libertadores',
-      stadium: 'Maracanã - Rio de Janeiro (RJ)',
-      broadcasters: ['TV Globo', 'ESPN', 'Disney+', 'Paramount+'],
+      stadium: 'Estadio Banco Guayaquil - Quito (ECU)',
+      broadcasters: ['A confirmar'],
+      status: 'agendado'
+    },
+    {
+      id: 'lib-est-uc-volta',
+      sport: 'futebol',
+      homeTeam: 'Estudiantes de La Plata',
+      homeTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10091.png',
+      awayTeam: 'Universidad Católica',
+      awayTeamLogo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10112.png',
+      date: '2026-08-25',
+      time: '21:30',
+      division: 'Libertadores',
+      stadium: 'Estadio Jorge Luis Hirschi - La Plata (ARG)',
+      broadcasters: ['A confirmar'],
       status: 'agendado'
     }
   ];
