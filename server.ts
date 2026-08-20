@@ -1053,25 +1053,72 @@ async function scrapeConmebolLibertadores(forceRefresh: boolean = false): Promis
           ? `https://gol-cdn.conmebol.com/icons/team/light/3x/id/${target.fixture_away_team_id}.png?version=${crestVersion}`
           : getClubDetails(target.fixture_away_team_title).logo;
 
-        // Date & Time extraction from fixture title e.g. "Universidad Católica vs Estudiantes (Ter, 18 Ago 2026 - 21:30)"
+        // Date & Time extraction from fixture timestamp in Brasília Time (America/Sao_Paulo)
         let dateStr = '';
         let timeStr = '21:30';
-        const titleMatch = target.fixture_title?.match(/\(([A-Za-z]{3}),\s*(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})\s*-\s*(\d{2}:\d{2})\)/);
-        if (titleMatch) {
-          const months: Record<string, string> = { 'Jan': '01', 'Fev': '02', 'Mar': '03', 'Abr': '04', 'Mai': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Set': '09', 'Out': '10', 'Nov': '11', 'Dez': '12' };
-          const day = titleMatch[2].padStart(2, '0');
-          const month = months[titleMatch[3]] || '08';
-          const year = titleMatch[4];
-          dateStr = `${year}-${month}-${day}`;
-          timeStr = titleMatch[5];
-        } else if (target.fixture_date) {
+
+        if (target.fixture_date) {
           const dt = new Date(target.fixture_date * 1000);
-          dateStr = dt.toISOString().split('T')[0];
+          const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+          const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          dateStr = dateFormatter.format(dt); // e.g. "2026-08-18"
+          timeStr = timeFormatter.format(dt); // e.g. "21:30"
+        } else {
+          const titleMatch = target.fixture_title?.match(/\(([A-Za-z]{3}),\s*(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})\s*-\s*(\d{2}:\d{2})\)/);
+          if (titleMatch) {
+            const months: Record<string, string> = { 'Jan': '01', 'Fev': '02', 'Feb': '02', 'Mar': '03', 'Abr': '04', 'Apr': '04', 'Mai': '05', 'May': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Aug': '08', 'Set': '09', 'Sep': '09', 'Out': '10', 'Oct': '10', 'Nov': '11', 'Dez': '12', 'Dec': '12' };
+            const day = titleMatch[2].padStart(2, '0');
+            const month = months[titleMatch[3]] || '08';
+            const year = titleMatch[4];
+            dateStr = `${year}-${month}-${day}`;
+            timeStr = titleMatch[5];
+          }
         }
 
         const homeName = target.fixture_home_team_title.trim();
         const awayName = target.fixture_away_team_title.trim();
         const broadcasters = getLibertadoresBroadcasters(homeName, awayName);
+
+        // Scores & Penalties extraction from fixture page
+        let matchScore: any = null;
+        const homeScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--home\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-home[^>]*>\s*(\d+)\s*</i);
+        const awayScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--away\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-away[^>]*>\s*(\d+)\s*</i);
+        
+        const penHomeMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-home(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-home-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+        const penAwayMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-away(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-away-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+
+        if (homeScoreMatch && awayScoreMatch) {
+          const hScore = parseInt(homeScoreMatch[1], 10);
+          const aScore = parseInt(awayScoreMatch[1], 10);
+          let penalties = undefined;
+          let display = `${hScore} - ${aScore}`;
+          if (penHomeMatch && penAwayMatch) {
+            const pHome = parseInt(penHomeMatch[1], 10);
+            const pAway = parseInt(penAwayMatch[1], 10);
+            penalties = { home: pHome, away: pAway };
+            display = `${hScore} (${pHome}) - (${pAway}) ${aScore}`;
+          }
+          matchScore = {
+            home: hScore,
+            away: aScore,
+            penalties,
+            display
+          };
+        }
 
         return {
           id: `lib-${target.fixture_id}`,
@@ -1101,6 +1148,9 @@ async function scrapeConmebolLibertadores(forceRefresh: boolean = false): Promis
             ? 'https://globoplay.globo.com/'
             : 'https://www.disneyplus.com/',
           matchViewUrl: url,
+          score: matchScore,
+          homeScore: matchScore ? matchScore.home : null,
+          awayScore: matchScore ? matchScore.away : null,
           status: 'agendado',
           scraped: true
         };
@@ -1139,7 +1189,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio Jornalista Mário Filho (Maracanã)',
       referee: 'CONMEBOL Libertadores',
       broadcasters: ['ESPN', 'Disney+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1608'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1608',
+      score: { home: 0, away: 0, display: '0 - 0' }
     },
     {
       id: 'lib-1614',
@@ -1151,7 +1202,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio Jorge Luis Hirschi',
       referee: 'CONMEBOL Libertadores',
       broadcasters: ['ESPN 4', 'Disney+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1614'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1614',
+      score: { home: 1, away: 1, display: '1 - 1' }
     },
     {
       id: 'lib-1647',
@@ -1163,7 +1215,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Allianz Parque',
       referee: 'Gustavo Adrián Tejera Capo',
       broadcasters: ['ESPN', 'Disney+', 'Paramount+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1647'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1647',
+      score: { home: 1, away: 1, display: '1 - 1' }
     },
     {
       id: 'lib-1617',
@@ -1175,7 +1228,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio Ciudad de Vicente López',
       referee: 'CONMEBOL Libertadores',
       broadcasters: ['Paramount+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1617'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1617',
+      score: { home: 1, away: 1, display: '1 - 1' }
     },
     {
       id: 'lib-1602',
@@ -1187,7 +1241,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estádio Governador Magalhães Pinto (Mineirão)',
       referee: 'Yael Falcón Pérez',
       broadcasters: ['TV Globo', 'ESPN', 'Disney+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1602'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1602',
+      score: { home: 1, away: 1, display: '1 - 1' }
     },
     {
       id: 'lib-1611',
@@ -1199,7 +1254,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estádio José Maria de Campos Maia',
       referee: 'Alexis Herrera',
       broadcasters: ['ESPN', 'Disney+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1611'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1611',
+      score: { home: 1, away: 1, display: '1 - 1' }
     },
     {
       id: 'lib-1644',
@@ -1211,7 +1267,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio Gigante de Arroyito',
       referee: 'Andrés Matonte',
       broadcasters: ['Paramount+', 'ESPN', 'Disney+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1644'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1644',
+      score: { home: 0, away: 0, display: '0 - 0' }
     },
     {
       id: 'lib-1620',
@@ -1223,7 +1280,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio Malvinas Argentinas',
       referee: 'Andrés José Rojas Noguera',
       broadcasters: ['ESPN', 'Disney+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1620'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1620',
+      score: { home: 1, away: 1, penalties: { home: 4, away: 5 }, display: '1 (4) - (5) 1' }
     },
     {
       id: 'lib-1605',
@@ -1235,7 +1293,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio Manuel Murillo Toro',
       referee: 'Wilton Pereira Sampaio',
       broadcasters: ['Paramount+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1605'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1605',
+      score: { home: 0, away: 1, display: '0 - 1' }
     },
     {
       id: 'lib-1638',
@@ -1247,7 +1306,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Claro Arena',
       referee: 'Wilmar Alexander Roldán Pérez',
       broadcasters: ['ESPN 4', 'Disney+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1638'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1638',
+      score: { home: 0, away: 3, display: '0 - 3' }
     },
     {
       id: 'lib-1626',
@@ -1259,7 +1319,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio ueno La Nueva Olla',
       referee: 'Facundo Raúl Tello Figueroa',
       broadcasters: ['ESPN', 'Disney+', 'Paramount+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1626'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1626',
+      score: { home: 0, away: 1, display: '0 - 1' }
     },
     {
       id: 'lib-1629',
@@ -1271,7 +1332,8 @@ function generateLibertadoresEvents(): any[] {
       stadium: 'Estadio Municipal Francisco Sánchez Rumoroso',
       referee: 'Roberto Bruno Pérez Gutierrez',
       broadcasters: ['Paramount+'],
-      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1629'
+      matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1629',
+      score: { home: 0, away: 0, penalties: { home: 6, away: 7 }, display: '0 (6) - (7) 0' }
     },
     {
       id: 'lib-1632',
@@ -1355,6 +1417,9 @@ function generateLibertadoresEvents(): any[] {
         ? 'https://globoplay.globo.com/'
         : 'https://www.disneyplus.com/',
       matchViewUrl: item.matchViewUrl,
+      score: (item as any).score || null,
+      homeScore: (item as any).score ? (item as any).score.home : null,
+      awayScore: (item as any).score ? (item as any).score.away : null,
       status: 'agendado',
       scraped: false
     };
@@ -1574,6 +1639,31 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
             matchStatus = 'agendado';
           }
 
+          // Scores & Penalties from CBF API (gols, penaltis)
+          let matchScore: any = null;
+          if (
+            game.mandante?.gols !== undefined && game.mandante?.gols !== null && game.mandante?.gols !== '' &&
+            game.visitante?.gols !== undefined && game.visitante?.gols !== null && game.visitante?.gols !== ''
+          ) {
+            const hGols = parseInt(game.mandante.gols, 10);
+            const aGols = parseInt(game.visitante.gols, 10);
+            if (!isNaN(hGols) && !isNaN(aGols)) {
+              let penObj = undefined;
+              if (game.mandante?.penaltis && game.visitante?.penaltis && (game.mandante.penaltis !== '0' || game.visitante.penaltis !== '0')) {
+                penObj = {
+                  home: parseInt(game.mandante.penaltis, 10),
+                  away: parseInt(game.visitante.penaltis, 10)
+                };
+              }
+              matchScore = {
+                home: hGols,
+                away: aGols,
+                penalties: penObj,
+                display: penObj ? `${hGols} (${penObj.home}) - (${penObj.away}) ${aGols}` : `${hGols} - ${aGols}`
+              };
+            }
+          }
+
           scrapedGames.push({
             id: `api-cbf-${game.id_jogo || Math.random().toString(36).substring(2, 9)}`,
             sport: 'futebol',
@@ -1590,6 +1680,9 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
             broadcasters: broadcasters.length > 0 ? broadcasters : ['A definir'],
             transmissionUrl: transmissionUrl,
             round: roundText,
+            score: matchScore,
+            homeScore: matchScore ? matchScore.home : null,
+            awayScore: matchScore ? matchScore.away : null,
             status: matchStatus,
             scraped: true
           });

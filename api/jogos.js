@@ -90,6 +90,54 @@ function getClubLogo(name) {
   return 'https://conteudo.cbf.com.br/clubes/20014/escudo.jpg';
 }
 
+// Dynamic status calculator based on match date and start time (America/Sao_Paulo timezone - UTC-3)
+function calculateMatchStatus(dateStr, timeStr, rawStatus) {
+  if (rawStatus) {
+    const s = String(rawStatus).toLowerCase();
+    if (s.includes('finaliz') || s.includes('encerrad') || s.includes('terminad') || s.includes('concluid') || s.includes('fim')) {
+      return 'finalizado';
+    }
+    if (s.includes('ao vivo') || s.includes('em andamento') || s.includes('jogando')) {
+      return 'ao_vivo';
+    }
+  }
+
+  try {
+    if (!dateStr || dateStr === 'A definir') return 'agendado';
+
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+
+      const timeClean = (timeStr && timeStr.includes(':')) ? timeStr.trim() : '16:00';
+      const [hoursStr, minutesStr] = timeClean.split(':');
+      const hours = parseInt(hoursStr, 10) || 16;
+      const minutes = parseInt(minutesStr, 10) || 0;
+
+      // Brasilia is UTC-3. Match start in UTC ms:
+      const matchStartUtcMs = Date.UTC(year, month, day, hours + 3, minutes);
+      // Typical match duration: 115 minutes
+      const matchEndUtcMs = matchStartUtcMs + (115 * 60 * 1000);
+
+      const nowMs = Date.now();
+
+      if (nowMs < matchStartUtcMs) {
+        return 'agendado';
+      } else if (nowMs >= matchStartUtcMs && nowMs <= matchEndUtcMs) {
+        return 'ao_vivo';
+      } else {
+        return 'finalizado';
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao calcular status da partida:', err);
+  }
+
+  return 'agendado';
+}
+
 function getLibertadoresBroadcasters(homeName, awayName) {
   const combined = `${homeName} ${awayName}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   
@@ -170,22 +218,69 @@ async function scrapeConmebolLibertadores() {
 
         let dateStr = '';
         let timeStr = '21:30';
-        const titleMatch = target.fixture_title?.match(/\(([A-Za-z]{3}),\s*(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})\s*-\s*(\d{2}:\d{2})\)/);
-        if (titleMatch) {
-          const months = { 'Jan': '01', 'Fev': '02', 'Mar': '03', 'Abr': '04', 'Mai': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Set': '09', 'Out': '10', 'Nov': '11', 'Dez': '12' };
-          const day = titleMatch[2].padStart(2, '0');
-          const month = months[titleMatch[3]] || '08';
-          const year = titleMatch[4];
-          dateStr = `${year}-${month}-${day}`;
-          timeStr = titleMatch[5];
-        } else if (target.fixture_date) {
+
+        if (target.fixture_date) {
           const dt = new Date(target.fixture_date * 1000);
-          dateStr = dt.toISOString().split('T')[0];
+          const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+          const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          dateStr = dateFormatter.format(dt);
+          timeStr = timeFormatter.format(dt);
+        } else {
+          const titleMatch = target.fixture_title?.match(/\(([A-Za-z]{3}),\s*(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})\s*-\s*(\d{2}:\d{2})\)/);
+          if (titleMatch) {
+            const months = { 'Jan': '01', 'Fev': '02', 'Feb': '02', 'Mar': '03', 'Abr': '04', 'Apr': '04', 'Mai': '05', 'May': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Aug': '08', 'Set': '09', 'Sep': '09', 'Out': '10', 'Oct': '10', 'Nov': '11', 'Dez': '12', 'Dec': '12' };
+            const day = titleMatch[2].padStart(2, '0');
+            const month = months[titleMatch[3]] || '08';
+            const year = titleMatch[4];
+            dateStr = `${year}-${month}-${day}`;
+            timeStr = titleMatch[5];
+          }
         }
 
         const homeName = target.fixture_home_team_title.trim();
         const awayName = target.fixture_away_team_title.trim();
         const broadcasters = getLibertadoresBroadcasters(homeName, awayName);
+
+        // Scores & Penalties extraction from fixture page
+        let matchScore = null;
+        const homeScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--home\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-home[^>]*>\s*(\d+)\s*</i);
+        const awayScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--away\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-away[^>]*>\s*(\d+)\s*</i);
+        
+        const penHomeMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-home(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-home-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+        const penAwayMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-away(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-away-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+
+        if (homeScoreMatch && awayScoreMatch) {
+          const hScore = parseInt(homeScoreMatch[1], 10);
+          const aScore = parseInt(awayScoreMatch[1], 10);
+          let penalties = undefined;
+          let display = `${hScore} - ${aScore}`;
+          if (penHomeMatch && penAwayMatch) {
+            const pHome = parseInt(penHomeMatch[1], 10);
+            const pAway = parseInt(penAwayMatch[1], 10);
+            penalties = { home: pHome, away: pAway };
+            display = `${hScore} (${pHome}) - (${pAway}) ${aScore}`;
+          }
+          matchScore = {
+            home: hScore,
+            away: aScore,
+            penalties,
+            display
+          };
+        }
 
         return {
           id: `lib-${target.fixture_id}`,
@@ -203,6 +298,9 @@ async function scrapeConmebolLibertadores() {
           referee: referee,
           broadcasters: broadcasters,
           matchViewUrl: url,
+          score: matchScore,
+          homeScore: matchScore ? matchScore.home : null,
+          awayScore: matchScore ? matchScore.away : null,
           status: 'agendado',
           scraped: true
         };
@@ -237,7 +335,10 @@ function getLibertadoresEvents() {
       referee: 'Andrés José Rojas Noguera',
       broadcasters: ['ESPN', 'Disney+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1620',
-      status: 'agendado',
+      score: { home: 1, away: 1, penalties: { home: 4, away: 5 }, display: '1 (4) - (5) 1' },
+      homeScore: 1,
+      awayScore: 1,
+      status: 'finalizado',
       scraped: true
     },
     {
@@ -254,9 +355,12 @@ function getLibertadoresEvents() {
       division: 'Libertadores',
       stadium: 'Estadio Manuel Murillo Toro',
       referee: 'Wilton Pereira Sampaio',
-      broadcasters: ['A confirmar'],
+      broadcasters: ['Paramount+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1605',
-      status: 'agendado',
+      score: { home: 0, away: 1, display: '0 - 1' },
+      homeScore: 0,
+      awayScore: 1,
+      status: 'finalizado',
       scraped: true
     },
     {
@@ -273,9 +377,12 @@ function getLibertadoresEvents() {
       division: 'Libertadores',
       stadium: 'Claro Arena',
       referee: 'Wilmar Alexander Roldán Pérez',
-      broadcasters: ['A confirmar'],
+      broadcasters: ['ESPN 4', 'Disney+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1638',
-      status: 'agendado',
+      score: { home: 0, away: 3, display: '0 - 3' },
+      homeScore: 0,
+      awayScore: 3,
+      status: 'finalizado',
       scraped: true
     },
     {
@@ -294,7 +401,10 @@ function getLibertadoresEvents() {
       referee: 'Facundo Raúl Tello Figueroa',
       broadcasters: ['ESPN', 'Disney+', 'Paramount+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1626',
-      status: 'agendado',
+      score: { home: 0, away: 1, display: '0 - 1' },
+      homeScore: 0,
+      awayScore: 1,
+      status: 'finalizado',
       scraped: true
     },
     {
@@ -311,9 +421,12 @@ function getLibertadoresEvents() {
       division: 'Libertadores',
       stadium: 'Estadio Municipal Francisco Sánchez Rumoroso',
       referee: 'Roberto Bruno Pérez Gutierrez',
-      broadcasters: ['A confirmar'],
+      broadcasters: ['Paramount+'],
       matchViewUrl: 'https://gol.conmebol.com/libertadores/pt-br/fixture/view/1629',
-      status: 'agendado',
+      score: { home: 0, away: 0, penalties: { home: 6, away: 7 }, display: '0 (6) - (7) 0' },
+      homeScore: 0,
+      awayScore: 0,
+      status: 'finalizado',
       scraped: true
     },
     {
@@ -397,38 +510,283 @@ function getLibertadoresEvents() {
 
 function getOtherSportsEvents() {
   return [
+    // --- BASQUETE ---
     {
       id: 'bskt-1',
+      sport: 'basquete',
+      homeTeam: 'Flamengo Basquete',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
+      awayTeam: 'Sesi Franca',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-01',
+      time: '18:00',
+      division: 'NBB',
+      stadium: 'Arena Carioca 1 - Rio de Janeiro',
+      broadcasters: ['SporTV 2', 'Disney+'],
+      round: 'NBB - Final Game 5',
+      status: 'finalizado',
+      score: { home: 84, away: 80, display: '84 - 80' },
+      scraped: false
+    },
+    {
+      id: 'bskt-2',
+      sport: 'basquete',
+      homeTeam: 'São Paulo FC',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20005/escudo.jpg',
+      awayTeam: 'Minas Tênis Clube',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-03',
+      time: '20:00',
+      division: 'NBB',
+      stadium: 'Ginásio do Morumbi - São Paulo',
+      broadcasters: ['ESPN 2', 'YouTube NBB'],
+      round: 'NBB - Temporada Regular',
+      status: 'finalizado',
+      score: { home: 78, away: 85, display: '78 - 85' },
+      scraped: false
+    },
+    {
+      id: 'bskt-3',
+      sport: 'basquete',
+      homeTeam: 'Indiana Fever',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Las Vegas Aces',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-05',
+      time: '21:00',
+      division: 'WNBA',
+      stadium: 'Gainbridge Fieldhouse - Indianapolis',
+      broadcasters: ['ESPN', 'Disney+'],
+      round: 'WNBA - Temporada Regular',
+      status: 'finalizado',
+      score: { home: 91, away: 88, display: '91 - 88' },
+      scraped: false
+    },
+    {
+      id: 'bskt-4',
+      sport: 'basquete',
+      homeTeam: 'Seleção Brasileira',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Seleção Argentina',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-07',
+      time: '19:30',
+      division: 'Amistoso',
+      stadium: 'Arena Carioca 1 - Rio de Janeiro',
+      broadcasters: ['CazéTV', 'SporTV 2'],
+      round: 'Desafio das Américas',
+      status: 'finalizado',
+      score: { home: 89, away: 82, display: '89 - 82' },
+      scraped: false
+    },
+    {
+      id: 'bskt-5',
       sport: 'basquete',
       homeTeam: 'Sesi Franca',
       homeTeamLogo: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=120&auto=format&fit=crop&q=80',
       awayTeam: 'Flamengo Basquete',
-      awayTeamLogo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/flamengo.png',
+      awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
       date: '2026-08-12',
       time: '20:00',
       division: 'NBB',
       stadium: 'Ginásio Pedrocão - Franca',
       broadcasters: ['SporTV 3', 'YouTube NBB', 'TV Cultura'],
+      round: 'NBB - Rodada Decisiva',
+      status: 'finalizado',
+      score: { home: 82, away: 79, display: '82 - 79' },
+      scraped: false
+    },
+    {
+      id: 'bskt-6',
+      sport: 'basquete',
+      homeTeam: 'Boston Celtics',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'New York Knicks',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-20',
+      time: '21:30',
+      division: 'NBA',
+      stadium: 'TD Garden - Boston',
+      broadcasters: ['ESPN', 'Disney+'],
+      round: 'NBA Summer Showcase',
       status: 'agendado',
       scraped: false
     },
+
+    // --- VÔLEI ---
     {
       id: 'volei-1',
       sport: 'volei',
       homeTeam: 'Sada Cruzeiro',
-      homeTeamLogo: 'https://conteudo.imguol.com.br/c/esporte/futebol/brasileirao2020/cruzeiro.png',
+      homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/59849/escudo.jpg',
       awayTeam: 'Minas Tênis Clube',
       awayTeamLogo: 'https://images.unsplash.com/photo-1592656094267-764a45160876?w=120&auto=format&fit=crop&q=80',
-      date: '2026-08-13',
+      date: '2026-08-01',
       time: '21:30',
       division: 'Superliga Masc.',
       stadium: 'Ginásio do Riacho - Contagem',
       broadcasters: ['SporTV 2'],
+      round: 'Superliga Masculina - Clássico',
+      status: 'finalizado',
+      score: { home: 3, away: 1, display: '3 - 1' },
+      scraped: false
+    },
+    {
+      id: 'volei-2',
+      sport: 'volei',
+      homeTeam: 'DENTIL Praia Clube',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Gerdau Minas',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1592656094267-764a45160876?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-02',
+      time: '19:00',
+      division: 'Superliga Fem.',
+      stadium: 'Arena Praia - Uberlândia',
+      broadcasters: ['SporTV 2'],
+      round: 'Superliga Feminina - Rodada 8',
+      status: 'finalizado',
+      score: { home: 3, away: 2, display: '3 - 2' },
+      scraped: false
+    },
+    {
+      id: 'volei-3',
+      sport: 'volei',
+      homeTeam: 'Sesi Bauru',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Osasco São Cristóvão',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1592656094267-764a45160876?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-05',
+      time: '20:30',
+      division: 'Superliga Fem.',
+      stadium: 'Arena Paulo Skaf - Bauru',
+      broadcasters: ['SporTV 2', 'Canal Vôlei Brasil'],
+      round: 'Superliga Feminina - Rodada 9',
+      status: 'finalizado',
+      score: { home: 1, away: 3, display: '1 - 3' },
+      scraped: false
+    },
+    {
+      id: 'volei-4',
+      sport: 'volei',
+      homeTeam: 'Brasil (Feminino)',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Itália (Feminino)',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1592656094267-764a45160876?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-07',
+      time: '18:00',
+      division: 'VNL (Liga das Nações)',
+      stadium: 'Ginásio do Maracanãzinho - Rio de Janeiro',
+      broadcasters: ['TV Globo', 'SporTV 2'],
+      round: 'Fase Final - Quartas de Final',
+      status: 'finalizado',
+      score: { home: 3, away: 0, display: '3 - 0' },
+      scraped: false
+    },
+    {
+      id: 'volei-5',
+      sport: 'volei',
+      homeTeam: 'Brasil (Masculino)',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Polônia (Masculino)',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1592656094267-764a45160876?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-08',
+      time: '18:00',
+      division: 'VNL (Liga das Nações)',
+      stadium: 'Ginásio do Maracanãzinho - Rio de Janeiro',
+      broadcasters: ['SporTV 2'],
+      round: 'Fase Final - Semifinal',
+      status: 'finalizado',
+      score: { home: 2, away: 3, display: '2 - 3' },
+      scraped: false
+    },
+
+    // --- JUDÔ ---
+    {
+      id: 'judo-1',
+      sport: 'judo',
+      homeTeam: 'Mayra Aguiar vs Alice Bellandi',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Disputa de Medalha de Ouro (-78kg)',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-01',
+      time: '16:00',
+      division: 'Grand Slam IJF',
+      stadium: 'Ginásio Nilson Nelson - Brasília',
+      broadcasters: ['CazéTV', 'SporTV 3', 'Olympic Channel'],
+      round: 'Finais e Bloco de Medalhas',
+      status: 'finalizado',
+      score: { home: 10, away: 0, display: 'Ippon' },
+      scraped: false
+    },
+    {
+      id: 'judo-2',
+      sport: 'judo',
+      homeTeam: 'Beatriz Souza vs Raz Hershko',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Disputa de Medalha (+78kg)',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-02',
+      time: '16:30',
+      division: 'Grand Slam IJF',
+      stadium: 'Ginásio Nilson Nelson - Brasília',
+      broadcasters: ['CazéTV', 'SporTV 3'],
+      round: 'Finais Categoria Pesado',
+      status: 'finalizado',
+      score: { home: 10, away: 0, display: 'Ippon' },
+      scraped: false
+    },
+
+    // --- AUTOMOBILISMO / F1 ---
+    {
+      id: 'auto-1',
+      sport: 'automobilismo',
+      homeTeam: 'GP da Hungria (F1)',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Hungaroring Circuit',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-02',
+      time: '10:00',
+      division: 'Fórmula 1',
+      stadium: 'Circuito Hungaroring - Budapeste',
+      broadcasters: ['Band', 'BandSports', 'F1 TV Pro'],
+      round: 'Corrida Principal (70 Voltas)',
+      status: 'finalizado',
+      scraped: false
+    },
+    {
+      id: 'auto-2',
+      sport: 'automobilismo',
+      homeTeam: 'Stock Car Interlagos',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Etapa 7 - Interlagos',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-08',
+      time: '15:30',
+      division: 'Stock Car',
+      stadium: 'Autódromo de Interlagos - São Paulo',
+      broadcasters: ['Band', 'SporTV 3', 'YouTube Stock Car'],
+      round: 'Corrida Sprint & Corrida Principal',
+      status: 'finalizado',
+      scraped: false
+    },
+    {
+      id: 'auto-3',
+      sport: 'automobilismo',
+      homeTeam: 'GP da Holanda (F1)',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Zandvoort Circuit',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-22',
+      time: '10:00',
+      division: 'Fórmula 1',
+      stadium: 'Circuito de Zandvoort - Holanda',
+      broadcasters: ['BandSports', 'F1 TV Pro'],
+      round: 'Classificação (Qualifying)',
       status: 'agendado',
       scraped: false
     },
     {
-      id: 'auto-1',
+      id: 'auto-4',
       sport: 'automobilismo',
       homeTeam: 'GP da Holanda (F1)',
       homeTeamLogo: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120&auto=format&fit=crop&q=80',
@@ -439,9 +797,47 @@ function getOtherSportsEvents() {
       division: 'Fórmula 1',
       stadium: 'Circuito de Zandvoort - Holanda',
       broadcasters: ['Band', 'BandSports', 'F1 TV Pro'],
+      round: 'Corrida Principal (72 Voltas)',
       status: 'agendado',
       scraped: false
     },
+
+    // --- TÊNIS ---
+    {
+      id: 'tenis-1',
+      sport: 'tenis',
+      homeTeam: 'Bia Haddad Maia',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Aryna Sabalenka',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-07',
+      time: '16:00',
+      division: 'WTA 1000',
+      stadium: 'Sobeys Stadium - Toronto',
+      broadcasters: ['ESPN 3', 'Disney+'],
+      round: 'Quartas de Final',
+      status: 'finalizado',
+      score: { home: 2, away: 1, display: '2 sets a 1' },
+      scraped: false
+    },
+    {
+      id: 'tenis-2',
+      sport: 'tenis',
+      homeTeam: 'US Open - Chave Principal',
+      homeTeamLogo: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=120&auto=format&fit=crop&q=80',
+      awayTeam: 'Quadra Central Arthur Ashe',
+      awayTeamLogo: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=120&auto=format&fit=crop&q=80',
+      date: '2026-08-24',
+      time: '12:00',
+      division: 'US Open',
+      stadium: 'USTA Billie Jean King Center - Nova York',
+      broadcasters: ['ESPN', 'SporTV 3', 'Disney+'],
+      round: 'Primeira Rodada (Grand Slam)',
+      status: 'agendado',
+      scraped: false
+    },
+
+    // --- LUTAS / MMA ---
     {
       id: 'mma-1',
       sport: 'lutas',
@@ -454,7 +850,8 @@ function getOtherSportsEvents() {
       division: 'UFC',
       stadium: 'RAC Arena - Perth (Austrália)',
       broadcasters: ['UFC Fight Pass', 'Band (Card Preliminar)'],
-      status: 'agendado',
+      status: 'finalizado',
+      score: { home: 1, away: 0, display: 'Finalização R4' },
       scraped: false
     }
   ];
@@ -552,6 +949,31 @@ export default async function handler(req, res) {
             }
             if (broadcasters.length === 0) broadcasters.push('CBF TV');
 
+            // Scores & Penalties from CBF API (gols, penaltis)
+            let matchScore = null;
+            if (
+              game.mandante?.gols !== undefined && game.mandante?.gols !== null && game.mandante?.gols !== '' &&
+              game.visitante?.gols !== undefined && game.visitante?.gols !== null && game.visitante?.gols !== ''
+            ) {
+              const hGols = parseInt(game.mandante.gols, 10);
+              const aGols = parseInt(game.visitante.gols, 10);
+              if (!isNaN(hGols) && !isNaN(aGols)) {
+                let penObj = undefined;
+                if (game.mandante?.penaltis && game.visitante?.penaltis && (game.mandante.penaltis !== '0' || game.visitante.penaltis !== '0')) {
+                  penObj = {
+                    home: parseInt(game.mandante.penaltis, 10),
+                    away: parseInt(game.visitante.penaltis, 10)
+                  };
+                }
+                matchScore = {
+                  home: hGols,
+                  away: aGols,
+                  penalties: penObj,
+                  display: penObj ? `${hGols} (${penObj.home}) - (${penObj.away}) ${aGols}` : `${hGols} - ${aGols}`
+                };
+              }
+            }
+
             scrapedGames.push({
               id: `api-cbf-${game.id || game.id_jogo || Math.random().toString(36).substring(2, 9)}`,
               sport: 'futebol',
@@ -564,6 +986,9 @@ export default async function handler(req, res) {
               division: division,
               stadium: game.local || 'A definir',
               broadcasters: broadcasters,
+              score: matchScore,
+              homeScore: matchScore ? matchScore.home : null,
+              awayScore: matchScore ? matchScore.away : null,
               status: 'agendado',
               scraped: true
             });
@@ -582,8 +1007,13 @@ export default async function handler(req, res) {
     const libertadoresEvents = await scrapeConmebolLibertadores();
     const otherSports = getOtherSportsEvents();
     
-    // Combine and sort
-    const combinedData = [...scrapedGames, ...libertadoresEvents, ...otherSports];
+    // Combine and apply calculateMatchStatus
+    const rawCombined = [...scrapedGames, ...libertadoresEvents, ...otherSports];
+    const combinedData = rawCombined.map(match => ({
+      ...match,
+      status: calculateMatchStatus(match.date, match.time, match.rawStatus || match.status)
+    }));
+
     combinedData.sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
 
     res.status(200).json({
@@ -601,10 +1031,14 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("Erro no proxy Serverless da CBF:", error);
-    // Even if CBF fails, return curated events
+    // Even if CBF fails, return curated events with calculated status
     const libertadoresEvents = await scrapeConmebolLibertadores();
     const otherSports = getOtherSportsEvents();
-    const fallbackData = [...libertadoresEvents, ...otherSports];
+    const rawFallback = [...libertadoresEvents, ...otherSports];
+    const fallbackData = rawFallback.map(match => ({
+      ...match,
+      status: calculateMatchStatus(match.date, match.time, match.rawStatus || match.status)
+    }));
 
     res.status(200).json({
       success: true,

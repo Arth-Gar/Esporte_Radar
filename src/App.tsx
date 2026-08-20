@@ -229,6 +229,41 @@ export default function App() {
   const [selectedMatch, setSelectedMatch] = useState<FootballMatch | null>(null);
   const [showMatchModalHelp, setShowMatchModalHelp] = useState(false);
 
+  // Dynamic status calculator based on match date and start time in Brasília timezone (America/Sao_Paulo / UTC-3)
+  const getEnrichedMatchStatus = (m: FootballMatch): 'agendado' | 'ao_vivo' | 'finalizado' => {
+    if (m.date) {
+      try {
+        const parts = m.date.split('-');
+        if (parts.length === 3) {
+          const yr = parseInt(parts[0], 10);
+          const mo = parseInt(parts[1], 10) - 1;
+          const dy = parseInt(parts[2], 10);
+
+          const timeClean = (m.time && m.time.includes(':')) ? m.time.trim() : '16:00';
+          const [hrStr, mnStr] = timeClean.split(':');
+          const hr = parseInt(hrStr, 10) || 16;
+          const mn = parseInt(mnStr, 10) || 0;
+
+          // Brasilia is UTC-3 -> Match start in UTC milliseconds:
+          const matchStartUtcMs = Date.UTC(yr, mo, dy, hr + 3, mn);
+          const matchEndUtcMs = matchStartUtcMs + (115 * 60 * 1000); // 115 min duration
+          const nowMs = Date.now();
+
+          if (nowMs < matchStartUtcMs) {
+            return 'agendado';
+          } else if (nowMs >= matchStartUtcMs && nowMs <= matchEndUtcMs) {
+            return 'ao_vivo';
+          } else {
+            return 'finalizado';
+          }
+        }
+      } catch (e) {
+        return m.status || 'agendado';
+      }
+    }
+    return m.status || 'agendado';
+  };
+
   // Fetch games from Express API
   const fetchGames = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -243,29 +278,11 @@ export default function App() {
       }
       const result = await response.json();
       if (result && result.success && Array.isArray(result.data)) {
-        // Enriquecer e validar o status em tempo real com base no relógio do usuário
-        const nowTime = new Date().getTime();
-        const enrichedData = result.data.map((m: FootballMatch) => {
-          if (m.date && m.time) {
-            try {
-              const [yr, mo, dy] = m.date.split('-').map(Number);
-              const [hr, mn] = m.time.split(':').map(Number);
-              const matchMs = new Date(yr, mo - 1, dy, hr || 0, mn || 0).getTime();
-              const diffHours = (nowTime - matchMs) / (1000 * 60 * 60);
-              
-              if (diffHours >= 2.5) {
-                return { ...m, status: 'finalizado' as const };
-              } else if (diffHours >= 0 && diffHours < 2.5) {
-                return { ...m, status: 'ao_vivo' as const };
-              } else {
-                return { ...m, status: 'agendado' as const };
-              }
-            } catch (e) {
-              return m;
-            }
-          }
-          return m;
-        });
+        // Enriquecer e validar o status em tempo real com base no fuso horário de Brasília (UTC-3)
+        const enrichedData = result.data.map((m: FootballMatch) => ({
+          ...m,
+          status: getEnrichedMatchStatus(m)
+        }));
 
         setMatches(enrichedData);
         setScrapeInfo({
@@ -289,6 +306,14 @@ export default function App() {
 
   useEffect(() => {
     fetchGames();
+  }, []);
+
+  // Periodic real-time recalculation of match statuses every 30 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setMatches(prev => prev.map(m => ({ ...m, status: getEnrichedMatchStatus(m) })));
+    }, 30000);
+    return () => clearInterval(timer);
   }, []);
 
   // Helper to check if a match is CONMEBOL Libertadores
@@ -1222,9 +1247,29 @@ export default function App() {
                           {/* Versus state */}
                           <div className="flex flex-col items-center justify-center shrink-0 px-1">
                             {isFinished ? (
-                              <span className="text-[9px] font-mono font-bold text-slate-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/20 uppercase tracking-wider">
-                                FINALIZADO
-                              </span>
+                              <div className="flex flex-col items-center justify-center gap-1">
+                                {(match.score || (match.homeScore !== undefined && match.homeScore !== null && match.awayScore !== undefined && match.awayScore !== null)) ? (
+                                  <div className="flex flex-col items-center">
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-black/70 border border-emerald-500/50 rounded shadow-sm">
+                                      <span className="text-xs sm:text-sm font-black font-mono text-white leading-none">
+                                        {match.score?.home ?? match.homeScore}
+                                      </span>
+                                      <span className="text-[10px] font-bold text-emerald-400 leading-none">×</span>
+                                      <span className="text-xs sm:text-sm font-black font-mono text-white leading-none">
+                                        {match.score?.away ?? match.awayScore}
+                                      </span>
+                                    </div>
+                                    {match.score?.penalties && (
+                                      <span className="text-[7.5px] font-mono font-bold text-amber-300 tracking-tight mt-0.5">
+                                        ({match.score.penalties.home}-{match.score.penalties.away} pên.)
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : null}
+                                <span className="text-[8px] font-mono font-bold text-slate-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/20 uppercase tracking-wider">
+                                  FINALIZADO
+                                </span>
+                              </div>
                             ) : isLive ? (
                               <span className="text-[9px] font-mono font-extrabold text-red-400 animate-pulse bg-red-950/60 px-1.5 py-0.5 rounded border border-red-800/40 uppercase tracking-wider flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping"></span>
@@ -1459,10 +1504,32 @@ export default function App() {
                       </div>
                     ) : selectedMatch.status === 'finalizado' ? (
                       <div className="space-y-1 !-mt-[35px]" style={{ marginTop: '-35px' }}>
-                        <span className="text-[8px] font-bold text-green-500 uppercase tracking-wider block">STATUS</span>
-                        <div className="text-xs font-mono font-black text-seagreen bg-green-950/80 px-2 py-1 rounded border border-green-900/30 whitespace-nowrap">
-                          FINALIZADO
-                        </div>
+                        <span className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider block">PLACAR FINAL</span>
+                        {(selectedMatch.score || (selectedMatch.homeScore !== undefined && selectedMatch.homeScore !== null && selectedMatch.awayScore !== undefined && selectedMatch.awayScore !== null)) ? (
+                          <div className="flex flex-col items-center">
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-black/80 border border-emerald-500/60 rounded-md shadow-md">
+                              <span className="text-base sm:text-lg font-mono font-black text-white leading-none">
+                                {selectedMatch.score?.home ?? selectedMatch.homeScore}
+                              </span>
+                              <span className="text-xs font-bold text-emerald-400 leading-none">×</span>
+                              <span className="text-base sm:text-lg font-mono font-black text-white leading-none">
+                                {selectedMatch.score?.away ?? selectedMatch.awayScore}
+                              </span>
+                            </div>
+                            {selectedMatch.score?.penalties && (
+                              <span className="text-[8px] font-mono font-bold text-amber-300 mt-0.5 bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-800/40 whitespace-nowrap">
+                                Pên: {selectedMatch.score.penalties.home} × {selectedMatch.score.penalties.away}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-xs font-mono font-black text-seagreen bg-green-950/80 px-2 py-1 rounded border border-green-900/30 whitespace-nowrap">
+                            FINALIZADO
+                          </div>
+                        )}
+                        <span className="text-[7.5px] font-mono font-bold text-slate-400 uppercase tracking-wider block mt-0.5">
+                          ENCERRADO
+                        </span>
                       </div>
                     ) : (
                       <div className="space-y-1 !-mt-[35px]" style={{ marginTop: '-35px' }}>

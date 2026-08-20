@@ -17,6 +17,16 @@ export interface SocialProject {
   requirements: string;
 }
 
+export interface MatchScore {
+  home: number | string;
+  away: number | string;
+  penalties?: {
+    home: number | string;
+    away: number | string;
+  };
+  display?: string;
+}
+
 export interface FootballMatch {
   id: string;
   sport?: SportType;
@@ -35,6 +45,9 @@ export interface FootballMatch {
   round: string;
   status: 'agendado' | 'ao_vivo' | 'finalizado';
   scraped: boolean;
+  score?: MatchScore | null;
+  homeScore?: number | string | null;
+  awayScore?: number | string | null;
   category?: string;
   referee?: string;
   matchViewUrl?: string;
