@@ -3,6 +3,34 @@ import { FootballMatch, UserPreferences, TeamNotificationConfig } from '../types
 const STORAGE_KEY = 'esporte_radar_user_prefs_v1';
 const NOTIFIED_MATCHES_KEY = 'esporte_radar_notified_matches_v1';
 
+export interface InAppToast {
+  id: string;
+  title: string;
+  body: string;
+  icon?: string;
+  type: 'info' | 'success' | 'alert';
+  timestamp: number;
+}
+
+type ToastListener = (toast: InAppToast) => void;
+const toastListeners: Set<ToastListener> = new Set();
+
+export function subscribeToInAppToasts(listener: ToastListener): () => void {
+  toastListeners.add(listener);
+  return () => {
+    toastListeners.delete(listener);
+  };
+}
+
+export function emitInAppToast(toast: Omit<InAppToast, 'id' | 'timestamp'>) {
+  const fullToast: InAppToast = {
+    ...toast,
+    id: `toast-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: Date.now(),
+  };
+  toastListeners.forEach(listener => listener(fullToast));
+}
+
 export const DEFAULT_PREFERENCES: UserPreferences = {
   favoriteTeams: ['Flamengo'],
   notificationConfigs: {
@@ -18,6 +46,17 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   notifyBeforeMinutes: 15,
   onlyFavoritesInFeed: false,
 };
+
+// Register Service Worker for mobile browsers (required for Android Chrome showNotification)
+export function initServiceWorker(): void {
+  if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.warn('[ServiceWorker] Registro falhou ou desabilitado:', err);
+      });
+    });
+  }
+}
 
 // Retrieve stored preferences
 export function getStoredPreferences(): UserPreferences {
@@ -49,20 +88,27 @@ export function savePreferences(prefs: UserPreferences): void {
 
 // Check notification support
 export function isNotificationSupported(): boolean {
-  return typeof window !== 'undefined' && 'Notification' in window;
+  return typeof window !== 'undefined' && ('Notification' in window || 'serviceWorker' in navigator);
 }
 
 // Get current permission status
 export function getNotificationPermission(): NotificationPermission | 'unsupported' {
-  if (!isNotificationSupported()) return 'unsupported';
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
   return Notification.permission;
 }
 
 // Request permission from browser
 export async function requestNotificationPermission(): Promise<NotificationPermission | 'unsupported'> {
-  if (!isNotificationSupported()) return 'unsupported';
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return 'unsupported';
+  }
+
   try {
     const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      // Play a quick subtle audio confirmation
+      playNotificationChime();
+    }
     return permission;
   } catch (e) {
     console.warn('Erro ao solicitar permissão de notificação:', e);
@@ -70,7 +116,42 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
 }
 
-// Dispatch a system web notification with smartwatch haptic pattern
+// Play pleasant web audio chime on mobile & desktop
+export function playNotificationChime(): void {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    
+    // First tone (523.25 Hz - C5)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+    gain1.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(ctx.currentTime);
+    osc1.stop(ctx.currentTime + 0.25);
+
+    // Second tone (659.25 Hz - E5)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.12);
+    gain2.gain.setValueAtTime(0.15, ctx.currentTime + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(ctx.currentTime + 0.12);
+    osc2.stop(ctx.currentTime + 0.45);
+  } catch {
+    // AudioContext blocked or unsupported in current state
+  }
+}
+
+// Dispatch a system web notification with smartwatch & mobile haptic pattern
 export async function dispatchNotification(
   title: string,
   options: {
@@ -79,8 +160,21 @@ export async function dispatchNotification(
     badge?: string;
     tag?: string;
     data?: any;
+    sound?: boolean;
   }
 ): Promise<boolean> {
+  // Always emit an in-app visual toast so the user never misses an alert
+  emitInAppToast({
+    title,
+    body: options.body,
+    icon: options.icon,
+    type: 'info',
+  });
+
+  if (options.sound !== false) {
+    playNotificationChime();
+  }
+
   if (!isNotificationSupported() || Notification.permission !== 'granted') {
     return false;
   }
@@ -97,21 +191,27 @@ export async function dispatchNotification(
     data: options.data,
   };
 
-  try {
-    // Try service worker notification first (better integration with background & smartwatches)
-    if ('serviceWorker' in navigator) {
-      try {
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration && registration.showNotification) {
-          await registration.showNotification(title, notificationOptions);
-          return true;
-        }
-      } catch (swErr) {
-        // Fallback to standard Notification
+  // 1. Try Service Worker showNotification (mandatory on Mobile Chrome/Android & PWA)
+  if ('serviceWorker' in navigator) {
+    try {
+      let reg: ServiceWorkerRegistration | undefined;
+      if (navigator.serviceWorker.ready) {
+        reg = await navigator.serviceWorker.ready;
       }
+      if (!reg) {
+        reg = await navigator.serviceWorker.getRegistration();
+      }
+      if (reg && reg.showNotification) {
+        await reg.showNotification(title, notificationOptions);
+        return true;
+      }
+    } catch (swErr) {
+      console.warn('Fallback de SW para window.Notification:', swErr);
     }
+  }
 
-    // Standard Web Notification API
+  // 2. Standard Web Notification API (Desktop / Safari)
+  try {
     const notif = new Notification(title, notificationOptions);
     notif.onclick = function () {
       window.focus();
@@ -124,18 +224,66 @@ export async function dispatchNotification(
   }
 }
 
-// Send a test notification to verify mobile and smartwatch pairing
-export async function sendTestNotification(teamName = 'Flamengo'): Promise<boolean> {
+// Send a test notification to verify mobile, browser and smartwatch pairing
+export async function sendTestNotification(teamName = 'Flamengo'): Promise<{
+  success: boolean;
+  permission: NotificationPermission | 'unsupported';
+  message: string;
+}> {
   const perm = await requestNotificationPermission();
-  if (perm !== 'granted') {
-    return false;
+
+  if (perm === 'unsupported') {
+    emitInAppToast({
+      title: 'Notificações Não Suportadas',
+      body: 'Seu navegador não oferece suporte à API de notificações nativas.',
+      type: 'alert',
+    });
+    return {
+      success: false,
+      permission: 'unsupported',
+      message: 'Seu navegador não suporta notificações nativas.',
+    };
   }
 
-  return dispatchNotification(`⚽ Notificação de Jogo: ${teamName}`, {
+  if (perm === 'denied') {
+    emitInAppToast({
+      title: 'Permissão Bloqueada',
+      body: 'As notificações estão bloqueadas nas permissões do seu navegador. Habilite clicando no cadeado ao lado do endereço.',
+      type: 'alert',
+    });
+    return {
+      success: false,
+      permission: 'denied',
+      message: 'Permissão bloqueada nas configurações do navegador.',
+    };
+  }
+
+  if (perm !== 'granted') {
+    emitInAppToast({
+      title: 'Permissão Pendente',
+      body: 'Por favor, aprove o pedido de notificação na caixa de diálogo do seu navegador.',
+      type: 'info',
+    });
+    return {
+      success: false,
+      permission: perm,
+      message: 'Permissão não concedida.',
+    };
+  }
+
+  const dispatched = await dispatchNotification(`⚽ Notificação de Teste: ${teamName}`, {
     body: `Transmissão confirmada! O jogo do ${teamName} começará em breve. Sincronizado com seu celular e smartwatch.`,
     tag: `test-alert-${Date.now()}`,
     icon: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
   });
+
+  return {
+    success: dispatched,
+    permission: 'granted',
+    message: dispatched 
+      ? 'Notificação enviada com sucesso! Verifique sua barra de avisos ou relógio.' 
+      : 'Permissão concedida, alerta exibido no app.',
+  };
 }
 
 // Get list of notified match keys to prevent duplicate alerts
@@ -216,6 +364,7 @@ export function checkAndTriggerMatchAlerts(matches: FootballMatch[], prefs: User
               body: `O jogo pela ${match.division} começará em ${diffMinutes} min! Onde assistir: ${broadcastersText}.`,
               tag: alertKey,
               icon: match.homeTeamLogo || match.awayTeamLogo,
+              sound: config.soundEnabled,
             });
             markMatchAsNotified(match.id, `${team}_reminder_${match.date}`);
           }
@@ -229,6 +378,7 @@ export function checkAndTriggerMatchAlerts(matches: FootballMatch[], prefs: User
               body: `A partida pela ${match.division} já começou! Estádio: ${match.stadium}. Sintonize em: ${broadcastersText}.`,
               tag: alertKey,
               icon: match.homeTeamLogo || match.awayTeamLogo,
+              sound: config.soundEnabled,
             });
             markMatchAsNotified(match.id, `${team}_live_${match.date}`);
           }

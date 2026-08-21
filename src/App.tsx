@@ -32,10 +32,14 @@ import { SocialProjectsView } from './components/SocialProjectsView';
 import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { Preloader } from './components/Preloader';
 import { TeamPreferencesModal } from './components/TeamPreferencesModal';
+import { NotificationToastContainer } from './components/NotificationToastContainer';
 import { 
   getStoredPreferences, 
   savePreferences, 
-  checkAndTriggerMatchAlerts 
+  checkAndTriggerMatchAlerts,
+  initServiceWorker,
+  requestNotificationPermission,
+  emitInAppToast
 } from './utils/notificationService';
 import { SOCIAL_PROJECTS } from './data/socialProjects';
 
@@ -172,10 +176,38 @@ export default function App() {
     savePreferences(newPrefs);
   };
 
+  // Initialize Service Worker on mount for background push notifications & mobile alerts
+  useEffect(() => {
+    initServiceWorker();
+  }, []);
+
   // Quick toggle favorite for a specific team (directly from match card)
-  const handleToggleFavoriteTeam = (teamName: string, e?: React.MouseEvent) => {
+  const handleToggleFavoriteTeam = async (teamName: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const isFav = preferences.favoriteTeams.includes(teamName);
+
+    // If favoriting a team, prompt browser for notification permission if default
+    if (!isFav && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        try {
+          const perm = await requestNotificationPermission();
+          if (perm === 'granted') {
+            emitInAppToast({
+              title: `🔔 Alertas Ativados: ${teamName}`,
+              body: `Notificações autorizadas com sucesso! Você receberá avisos antes das partidas no celular e relógio.`,
+              type: 'success',
+            });
+          }
+        } catch {}
+      } else if (Notification.permission === 'granted') {
+        emitInAppToast({
+          title: `⭐ Time Favoritado: ${teamName}`,
+          body: `Você receberá avisos no início das partidas do ${teamName}.`,
+          type: 'success',
+        });
+      }
+    }
+
     const newFavorites = isFav
       ? preferences.favoriteTeams.filter(t => t !== teamName)
       : [...preferences.favoriteTeams, teamName];
@@ -1720,6 +1752,9 @@ export default function App() {
 
       {/* FLOATING PWA / ADD TO HOME SCREEN PROMPT */}
       <InstallPwaPrompt />
+
+      {/* FLOATING IN-APP NOTIFICATION TOASTS (CELULAR, SMARTWATCH & NAVEGADOR) */}
+      <NotificationToastContainer />
 
     </div>
   );

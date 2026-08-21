@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Star, 
@@ -16,13 +16,18 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronUp,
-  Sparkles
+  Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  Volume2
 } from 'lucide-react';
-import { FootballMatch, UserPreferences, TeamNotificationConfig } from '../types';
+import { FootballMatch, UserPreferences } from '../types';
 import { 
   getNotificationPermission, 
   requestNotificationPermission, 
-  sendTestNotification 
+  sendTestNotification,
+  playNotificationChime,
+  emitInAppToast
 } from '../utils/notificationService';
 
 interface TeamPreferencesModalProps {
@@ -44,7 +49,15 @@ export function TeamPreferencesModal({
   const [expandedTeamConfig, setExpandedTeamConfig] = useState<string | null>(null);
   const [notificationStatus, setNotificationStatus] = useState<'default' | 'granted' | 'denied' | 'unsupported'>(getNotificationPermission());
   const [testSent, setTestSent] = useState(false);
+  const [testResultMessage, setTestResultMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'teams' | 'divisions' | 'smartwatch'>('teams');
+
+  // Sync notification permission status when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setNotificationStatus(getNotificationPermission());
+    }
+  }, [isOpen]);
 
   // Extract all unique clubs/teams and available divisions dynamically
   const { allTeams, allDivisions } = useMemo(() => {
@@ -109,9 +122,18 @@ export function TeamPreferencesModal({
     return allTeams.filter(t => t.name.toLowerCase().includes(term));
   }, [allTeams, searchTerm]);
 
-  // Toggle favorite status
-  const handleToggleFavorite = (teamName: string) => {
+  // Toggle favorite status and request browser permission if needed
+  const handleToggleFavorite = async (teamName: string) => {
     const isFav = preferences.favoriteTeams.includes(teamName);
+
+    // If adding a team to favorites, request browser notification permission
+    if (!isFav && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        const perm = await requestNotificationPermission();
+        setNotificationStatus(perm);
+      }
+    }
+
     const newFavorites = isFav 
       ? preferences.favoriteTeams.filter(t => t !== teamName)
       : [...preferences.favoriteTeams, teamName];
@@ -136,9 +158,17 @@ export function TeamPreferencesModal({
   };
 
   // Toggle notifications for a team
-  const handleToggleNotification = (teamName: string) => {
+  const handleToggleNotification = async (teamName: string) => {
     const current = preferences.notificationConfigs[teamName];
     const isCurrentlyEnabled = current?.enabled ?? false;
+
+    // If turning on notification, request browser permission if default
+    if (!isCurrentlyEnabled && typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        const perm = await requestNotificationPermission();
+        setNotificationStatus(perm);
+      }
+    }
 
     const newConfigs = {
       ...preferences.notificationConfigs,
@@ -171,8 +201,6 @@ export function TeamPreferencesModal({
     const currentDivs = current.divisions || [];
 
     if (currentDivs.length === 0) {
-      // If was previously 'all', clicking one means user wants all EXCEPT this one, or just this one.
-      // Usually user wants only specific ones. Let's toggle it explicitly.
       newDivisions = [division];
     } else if (currentDivs.includes(division)) {
       newDivisions = currentDivs.filter(d => d !== division);
@@ -210,7 +238,7 @@ export function TeamPreferencesModal({
       [teamName]: {
         ...current,
         enabled: true,
-        divisions: all ? [] : ['Série A'], // default to Série A if clearing all
+        divisions: all ? [] : ['Série A'],
       }
     };
 
@@ -244,7 +272,7 @@ export function TeamPreferencesModal({
     });
   };
 
-  // Request browser permission
+  // Request browser permission directly
   const handleRequestPermission = async () => {
     const perm = await requestNotificationPermission();
     setNotificationStatus(perm);
@@ -253,6 +281,11 @@ export function TeamPreferencesModal({
         ...preferences,
         notificationsGlobalEnabled: true,
       });
+      emitInAppToast({
+        title: '🔔 Permissão Concedida!',
+        body: 'Notificações ativadas no seu celular, smartwatch e navegador.',
+        type: 'success',
+      });
     }
   };
 
@@ -260,8 +293,15 @@ export function TeamPreferencesModal({
   const handleSendTest = async (teamName?: string) => {
     const targetTeam = teamName || preferences.favoriteTeams[0] || 'Flamengo';
     setTestSent(true);
-    await sendTestNotification(targetTeam);
-    setTimeout(() => setTestSent(false), 3000);
+    setTestResultMessage(null);
+
+    const result = await sendTestNotification(targetTeam);
+    setNotificationStatus(result.permission);
+    setTestResultMessage(result.message);
+
+    setTimeout(() => {
+      setTestSent(false);
+    }, 2500);
   };
 
   if (!isOpen) return null;
@@ -352,6 +392,55 @@ export function TeamPreferencesModal({
             {/* TAB 1: MEUS TIMES E ALERTAS */}
             {activeTab === 'teams' && (
               <div className="space-y-4">
+                
+                {/* PROMINENT PERMISSION STATUS BANNER */}
+                {notificationStatus !== 'granted' ? (
+                  <div className="p-3.5 bg-amber-950/40 border border-amber-500/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                    <div className="flex items-start gap-2.5">
+                      <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-xs font-bold text-amber-200 uppercase tracking-tight">
+                          {notificationStatus === 'denied' 
+                            ? 'Permissão de Notificação Bloqueada' 
+                            : 'Permissão de Notificação Pendente'}
+                        </h4>
+                        <p className="text-[11px] text-amber-300/80 mt-0.5 leading-snug">
+                          {notificationStatus === 'denied'
+                            ? 'As notificações estão desativadas no navegador. Clique no cadeado ao lado da URL para autorizar.'
+                            : 'Para receber avisos quando os jogos começarem no celular e relógio, ative a permissão.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {notificationStatus !== 'denied' && (
+                      <button
+                        onClick={handleRequestPermission}
+                        className="px-3.5 py-2 bg-amber-500 text-black hover:bg-amber-400 text-xs font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider shrink-0 flex items-center justify-center gap-1.5 shadow"
+                      >
+                        <Bell className="h-4 w-4 fill-black" />
+                        Ativar Notificações
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-xl flex items-center justify-between gap-2 text-xs text-emerald-300 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                      <span>
+                        <strong>Notificações Ativas:</strong> Seu celular, navegador e smartwatch receberão os avisos das partidas.
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleSendTest()}
+                      disabled={testSent}
+                      className="px-2.5 py-1 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border border-emerald-500/40 text-[10px] font-bold rounded transition-all cursor-pointer uppercase shrink-0 flex items-center gap-1"
+                    >
+                      <Zap className="h-3 w-3 text-amber-300" />
+                      {testSent ? 'Enviando...' : 'Testar'}
+                    </button>
+                  </div>
+                )}
+
                 {/* Search Bar */}
                 <div className="relative">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
@@ -462,7 +551,7 @@ export function TeamPreferencesModal({
                               {/* Favorite Star Button */}
                               <button
                                 onClick={() => handleToggleFavorite(team.name)}
-                                title={isFav ? 'Remover dos favoritos' : 'Favoritar time (ver primeiro no feed)'}
+                                title={isFav ? 'Remover dos favoritos' : 'Favoritar time (ver primeiro no feed & ativar alertas)'}
                                 className={`p-2 rounded-lg border text-xs transition-all cursor-pointer flex items-center gap-1 ${
                                   isFav
                                     ? 'bg-amber-500 text-black font-black border-amber-400 shadow'
@@ -501,7 +590,7 @@ export function TeamPreferencesModal({
                                     <button
                                       type="button"
                                       onClick={() => handleSetAllDivisions(team.name, true)}
-                                      className="text-[10px] text-seagreen hover:underline font-bold"
+                                      className="text-[10px] text-seagreen hover:underline font-bold cursor-pointer"
                                     >
                                       Todas
                                     </button>
@@ -509,7 +598,7 @@ export function TeamPreferencesModal({
                                     <button
                                       type="button"
                                       onClick={() => handleSetAllDivisions(team.name, false)}
-                                      className="text-[10px] text-green-500 hover:underline"
+                                      className="text-[10px] text-green-500 hover:underline cursor-pointer"
                                     >
                                       Só Série A
                                     </button>
@@ -553,7 +642,7 @@ export function TeamPreferencesModal({
                                       <button
                                         key={item.value}
                                         onClick={() => handleSetTiming(team.name, item.value)}
-                                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all ${
+                                        className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
                                           (config?.notifyBeforeMinutes ?? 15) === item.value
                                             ? 'bg-seagreen text-white border-seagreen'
                                             : 'bg-green-950/40 text-green-400 border-green-900/40 hover:text-white'
@@ -671,7 +760,7 @@ export function TeamPreferencesModal({
                       Como funciona o espelhamento no seu relógio:
                     </div>
                     <p className="leading-relaxed">
-                      Ao habilitar notificações no seu navegador do celular (Safari no iOS ou Chrome no Android), o sistema operacional do telefone encaminha instantaneamente o alerta com <strong>vibração háptica</strong> para o relógio conectado no pulso.
+                      Ao habilitar notificações no seu navegador do celular (Chrome no Android ou Safari no iOS), o sistema operacional do telefone encaminha instantaneamente o alerta com <strong>vibração háptica e som</strong> para o relógio conectado no pulso.
                     </p>
                   </div>
                 </div>
@@ -686,15 +775,15 @@ export function TeamPreferencesModal({
                       <span className="text-xs font-mono font-bold mt-1 inline-flex items-center gap-1.5">
                         {notificationStatus === 'granted' ? (
                           <span className="text-seagreen flex items-center gap-1">
-                            <Check className="h-3.5 w-3.5" /> Permissão Concedida (Pronto)
+                            <Check className="h-3.5 w-3.5" /> Permissão Concedida (Pronto para receber alertas)
                           </span>
                         ) : notificationStatus === 'denied' ? (
-                          <span className="text-red-400">
-                            Bloqueada nas configurações do navegador
+                          <span className="text-red-400 flex items-center gap-1">
+                            <AlertCircle className="h-3.5 w-3.5" /> Bloqueada nas configurações do navegador
                           </span>
                         ) : (
-                          <span className="text-amber-400">
-                            Pendente de ativação
+                          <span className="text-amber-400 flex items-center gap-1">
+                            <AlertCircle className="h-3.5 w-3.5" /> Permissão pendente de autorização
                           </span>
                         )}
                       </span>
@@ -703,10 +792,10 @@ export function TeamPreferencesModal({
                     {notificationStatus !== 'granted' && (
                       <button
                         onClick={handleRequestPermission}
-                        className="px-4 py-2 bg-seagreen text-white text-xs font-bold rounded-lg hover:bg-seagreen-solid hover:text-black transition-all cursor-pointer uppercase tracking-wider shrink-0 flex items-center gap-2"
+                        className="px-4 py-2 bg-seagreen text-white text-xs font-bold rounded-lg hover:bg-seagreen-solid hover:text-black transition-all cursor-pointer uppercase tracking-wider shrink-0 flex items-center gap-2 shadow"
                       >
                         <Bell className="h-4 w-4" />
-                        Ativar Notificações
+                        Pedir Permissão Agora
                       </button>
                     )}
                   </div>
@@ -714,7 +803,7 @@ export function TeamPreferencesModal({
                   {/* Test Notification Trigger */}
                   <div className="pt-3 border-t border-green-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="text-xs text-green-400">
-                      Envie um alerta agora mesmo para testar se seu celular e relógio estão vibrando.
+                      Envie um alerta agora mesmo para confirmar se seu celular e relógio estão vibrando e tocando.
                     </div>
                     <button
                       onClick={() => handleSendTest(preferences.favoriteTeams[0])}
@@ -725,6 +814,13 @@ export function TeamPreferencesModal({
                       {testSent ? 'Enviando Notificação...' : 'Testar no Relógio / Celular'}
                     </button>
                   </div>
+
+                  {testResultMessage && (
+                    <div className="p-2.5 rounded bg-[#05140d] border border-sky-500/30 text-sky-300 text-xs flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-sky-400 shrink-0" />
+                      <span>{testResultMessage}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Feed Ordering Option */}
