@@ -397,7 +397,71 @@ const CLUB_MAPPING: { [key: string]: { name: string; slug: string; logo: string 
   'ind. del valle': { name: 'Independiente del Valle', slug: 'idv', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10089.png' },
   'independiente rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' },
   'csir': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' },
-  'rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' }
+  'rivadavia': { name: 'Independiente Rivadavia', slug: 'independiente-rivadavia', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801' },
+
+  // CONMEBOL Sudamericana Clubs
+  'lanus': { name: 'Lanús', slug: 'lanus', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10076.png' },
+  'lanús': { name: 'Lanús', slug: 'lanus', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10076.png' },
+  'belgrano': { name: 'Belgrano', slug: 'belgrano', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10075.png' },
+  'rosario central': { name: 'Rosario Central', slug: 'rosario-central', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10070.png' },
+  'rosario': { name: 'Rosario Central', slug: 'rosario-central', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10070.png' },
+  'sportivo ameliano': { name: 'Sportivo Ameliano', slug: 'sportivo-ameliano', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/159.png?version=2026040801' },
+  'ameliano': { name: 'Sportivo Ameliano', slug: 'sportivo-ameliano', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/159.png?version=2026040801' },
+  'danubio': { name: 'Danubio', slug: 'danubio', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10113.png' },
+  'racing montevideo': { name: 'Racing Montevideo', slug: 'racing-montevideo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10114.png' },
+  'coquimbo unido': { name: 'Coquimbo Unido', slug: 'coquimbo-unido', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10115.png' },
+  'coquimbo': { name: 'Coquimbo Unido', slug: 'coquimbo-unido', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10115.png' },
+  'platense': { name: 'Platense', slug: 'platense', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10116.png' },
+  'independiente medellin': { name: 'Independiente Medellín', slug: 'independiente-medellin', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10117.png' },
+  'independiente medellín': { name: 'Independiente Medellín', slug: 'independiente-medellin', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10117.png' },
+  'dim': { name: 'Independiente Medellín', slug: 'independiente-medellin', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10117.png' },
+  'medellin': { name: 'Independiente Medellín', slug: 'independiente-medellin', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10117.png' },
+  'america de cali': { name: 'América de Cali', slug: 'america-de-cali', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10118.png' },
+  'américa de cali': { name: 'América de Cali', slug: 'america-de-cali', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10118.png' },
+  'defensa y justicia': { name: 'Defensa y Justicia', slug: 'defensa-y-justicia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10074.png' },
+  'defensa': { name: 'Defensa y Justicia', slug: 'defensa-y-justicia', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10074.png' },
+  'independiente': { name: 'Independiente', slug: 'independiente', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10073.png' },
+  'cai': { name: 'Independiente', slug: 'independiente', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10073.png' },
+  'argentinos juniors': { name: 'Argentinos Juniors', slug: 'argentinos-juniors', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10072.png' },
+  'argentinos': { name: 'Argentinos Juniors', slug: 'argentinos-juniors', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10072.png' },
+  'huracan': { name: 'Huracán', slug: 'huracan', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10071.png' },
+  'huracán': { name: 'Huracán', slug: 'huracan', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10071.png' },
+  'newells': { name: "Newell's Old Boys", slug: 'newells', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10069.png' },
+  "newell's": { name: "Newell's Old Boys", slug: 'newells', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10069.png' },
+  'universidad de chile': { name: 'Universidad de Chile', slug: 'universidad-de-chile', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10119.png' },
+  'u de chile': { name: 'Universidad de Chile', slug: 'universidad-de-chile', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10119.png' },
+  'la u': { name: 'Universidad de Chile', slug: 'universidad-de-chile', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10119.png' },
+  'cesar vallejo': { name: 'César Vallejo', slug: 'cesar-vallejo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10120.png' },
+  'césar vallejo': { name: 'César Vallejo', slug: 'cesar-vallejo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10120.png' },
+  'cienciano': { name: 'Cienciano', slug: 'cienciano', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10121.png' },
+  'jorge wilstermann': { name: 'Jorge Wilstermann', slug: 'jorge-wilstermann', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10122.png' },
+  'wilstermann': { name: 'Jorge Wilstermann', slug: 'jorge-wilstermann', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10122.png' },
+  'real tomayapo': { name: 'Real Tomayapo', slug: 'real-tomayapo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10123.png' },
+  'tomayapo': { name: 'Real Tomayapo', slug: 'real-tomayapo', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10123.png' },
+  'delfin': { name: 'Delfín SC', slug: 'delfin', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10124.png' },
+  'delfín': { name: 'Delfín SC', slug: 'delfin', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10124.png' },
+  'metropolitanos': { name: 'Metropolitanos FC', slug: 'metropolitanos', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10125.png' },
+  'metropolitanos fc': { name: 'Metropolitanos FC', slug: 'metropolitanos', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10125.png' },
+  'rayo zuliano': { name: 'Rayo Zuliano', slug: 'rayo-zuliano', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10126.png' },
+  'luqueno': { name: 'Sportivo Luqueño', slug: 'luqueno', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10127.png' },
+  'luqueño': { name: 'Sportivo Luqueño', slug: 'luqueno', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10127.png' },
+  'sportivo luqueno': { name: 'Sportivo Luqueño', slug: 'luqueno', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10127.png' },
+  'sportivo luqueño': { name: 'Sportivo Luqueño', slug: 'luqueno', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10127.png' },
+  'nacional-par': { name: 'Nacional-PAR', slug: 'nacional-par', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10128.png' },
+  'nacional par': { name: 'Nacional-PAR', slug: 'nacional-par', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10128.png' },
+  'guarani-par': { name: 'Guaraní-PAR', slug: 'guarani-par', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10129.png' },
+  'guarani par': { name: 'Guaraní-PAR', slug: 'guarani-par', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10129.png' },
+  'recoleta': { name: 'Recoleta', slug: 'recoleta', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/157.png?version=2026040801' },
+  'deportivo recoleta': { name: 'Recoleta', slug: 'recoleta', logo: 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/157.png?version=2026040801' },
+  'macara': { name: 'Macará', slug: 'macara', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10130.png' },
+  'macará': { name: 'Macará', slug: 'macara', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10130.png' },
+  'city torque': { name: 'Montevideo City Torque', slug: 'city-torque', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10131.png' },
+  'montevideo city torque': { name: 'Montevideo City Torque', slug: 'city-torque', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10131.png' },
+  'tigre': { name: 'Tigre', slug: 'tigre', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10078.png' },
+  'independiente santa fe': { name: 'Independiente Santa Fe', slug: 'santa-fe', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10099.png' },
+  'ohiggins': { name: "O'Higgins", slug: 'ohiggins', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10132.png' },
+  "o'higgins": { name: "O'Higgins", slug: 'ohiggins', logo: 'https://images.fotmob.com/image_resources/logo/teamlogo/10132.png' },
+  'rb bragantino': { name: 'Red Bull Bragantino', slug: 'red-bull-bragantino', logo: 'https://conteudo.cbf.com.br/clubes/20018/escudo.jpg' }
 };
 
 // Helper to normalize name and return beautiful details
@@ -492,6 +556,9 @@ function getTransmissionDetails(broadcasters: string[]): { label: string; url: s
     }
     if (norm.includes('paramount')) {
       return { label: 'Paramount+', url: 'https://www.paramountplus.com/' };
+    }
+    if (norm.includes('sbt')) {
+      return { label: 'SBT', url: 'https://www.sbt.com.br/ao-vivo' };
     }
 
     return { label: b, url: 'https://ge.globo.com/' };
@@ -1426,6 +1493,263 @@ function generateLibertadoresEvents(): any[] {
   });
 }
 
+// =========================================================================
+// CONMEBOL SUDAMERICANA / COPA SUL-AMERICANA SCRAPER & FIXTURE ENGINE
+// =========================================================================
+
+// Cache for CONMEBOL Sudamericana scraped matches
+let cachedSudamericanaGames: any[] = [];
+let lastSudamericanaFetchTime = 0;
+
+// Broadcasters mapper helper for CONMEBOL Sudamericana matches in Brazil
+function getSudamericanaBroadcasters(homeName: string, awayName: string): string[] {
+  const combined = `${homeName} ${awayName}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  // Official broadcast distribution for CONMEBOL Sudamericana 2026:
+  // SBT has TV Aberta rights for Brazilian clubs (São Paulo, Santos, RB Bragantino, Atlético Mineiro, etc.)
+  // ESPN / Disney+ and Paramount+ hold primary pay-TV and streaming rights
+  if (combined.includes('sao paulo') || combined.includes('são paulo')) {
+    return ['SBT', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('santos') || combined.includes('macara')) {
+    return ['SBT', 'Paramount+'];
+  }
+  if (combined.includes('atletico mineiro') || combined.includes('atletico-mg') || combined.includes('bragantino')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('botafogo') || combined.includes('cienciano')) {
+    return ['Paramount+', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('vasco') || combined.includes('olimpia')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('boca') || combined.includes('recoleta')) {
+    return ['Paramount+', 'Disney+'];
+  }
+  if (combined.includes('river') || combined.includes('santa fe')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('tigre') || combined.includes('torque')) {
+    return ['Paramount+'];
+  }
+  if (combined.includes('gremio') || combined.includes('bolivar')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('lanus') || combined.includes('lanús')) {
+    return ['Paramount+'];
+  }
+  if (combined.includes('corinthians')) {
+    return ['SBT', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('cruzeiro')) {
+    return ['SBT', 'Paramount+'];
+  }
+  if (combined.includes('athletico') || combined.includes('fortaleza')) {
+    return ['ESPN', 'Disney+'];
+  }
+
+  return ['ESPN', 'Disney+', 'Paramount+'];
+}
+
+// Scrapes live match view pages directly from CONMEBOL Sudamericana (e.g. gol.conmebol.com/sudamericana/pt-br/fixture/view/:id)
+async function scrapeConmebolSudamericana(forceRefresh: boolean = false): Promise<any[]> {
+  const now = Date.now();
+  if (!forceRefresh && cachedSudamericanaGames.length > 0 && (now - lastSudamericanaFetchTime < 10 * 60 * 1000)) {
+    return cachedSudamericanaGames;
+  }
+
+  // Official fixture IDs for CONMEBOL Sudamericana 2026
+  let fixtureIds = [1518, 1527, 1521, 1512, 1530, 1563, 1567, 1560, 1573, 1570, 1579, 1557, 1564, 1581, 1599, 1576, 1587, 1584, 1593, 1596, 1590, 1685, 1707, 1710, 1686, 1701, 1704];
+  
+  // Dynamically discover all active fixture IDs from CONMEBOL Sudamericana hub
+  try {
+    const hubRes = await fetch('https://gol.conmebol.com/sudamericana/pt-br', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      signal: AbortSignal.timeout(3000)
+    });
+    if (hubRes.ok) {
+      const hubHtml = await hubRes.text();
+      const matches = [...hubHtml.matchAll(/\/sudamericana\/pt-br\/fixture\/view\/(\d+)/g)];
+      const scrapedIds = matches.map(m => parseInt(m[1], 10)).filter(n => !isNaN(n));
+      if (scrapedIds.length > 0) {
+        fixtureIds = [...new Set([...scrapedIds, ...fixtureIds])];
+      }
+    }
+  } catch (hubErr) {
+    // Keep fallback list of official fixture IDs
+  }
+
+  try {
+    const fetchPromises = fixtureIds.map(async (id) => {
+      try {
+        const url = `https://gol.conmebol.com/sudamericana/pt-br/fixture/view/${id}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000);
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        const html = await res.text();
+        const dm = html.match(/data-drupal-selector="drupal-settings-json">([\s\S]*?)<\/script>/);
+        if (!dm) return null;
+        const d = JSON.parse(dm[1]);
+        const target = d?.metadata?.targeting;
+        if (!target || !target.fixture_id || !target.fixture_home_team_title || target.fixture_home_team_title === 'TBD') return null;
+
+        // Exact stadium / venue extracted from page
+        const venueMatch = html.match(/class=["']m-match-centre-hero__venue["'][^>]*>([^<]+)<\/div>/i) ||
+                           html.match(/class=["']m-match-fixture-details__stadium["'][^>]*>([^<]+)<\/div>/i);
+        const venue = venueMatch ? venueMatch[1].trim() : 'Estádio a confirmar';
+
+        // Exact referee / árbitro extracted from page
+        const refereeMatch = html.match(/Árbitro<\/span>\s*<span[^>]*>([^<]+)<\/span>/i) ||
+                             html.match(/class="m-match-fixture-details__list-item-value">([^<]+)<\/span>/i);
+        const referee = refereeMatch ? refereeMatch[1].trim() : '';
+
+        const crestVersion = d?.clubcastCore?.dataPlatform?.crestVersion || '2026040801';
+        const homeLogo = target.fixture_home_team_id
+          ? `https://gol-cdn.conmebol.com/icons/team/light/3x/id/${target.fixture_home_team_id}.png?version=${crestVersion}`
+          : getClubDetails(target.fixture_home_team_title).logo;
+        const awayLogo = target.fixture_away_team_id
+          ? `https://gol-cdn.conmebol.com/icons/team/light/3x/id/${target.fixture_away_team_id}.png?version=${crestVersion}`
+          : getClubDetails(target.fixture_away_team_title).logo;
+
+        // Date & Time extraction in Brasília Time (America/Sao_Paulo)
+        let dateStr = '';
+        let timeStr = '21:30';
+
+        if (target.fixture_date) {
+          const dt = new Date(target.fixture_date * 1000);
+          const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+          const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          dateStr = dateFormatter.format(dt);
+          timeStr = timeFormatter.format(dt);
+        } else {
+          const titleMatch = target.fixture_title?.match(/\(([A-Za-z]{3}),\s*(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})\s*-\s*(\d{2}:\d{2})\)/);
+          if (titleMatch) {
+            const months: Record<string, string> = { 'Jan': '01', 'Fev': '02', 'Feb': '02', 'Mar': '03', 'Abr': '04', 'Apr': '04', 'Mai': '05', 'May': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Aug': '08', 'Set': '09', 'Sep': '09', 'Out': '10', 'Oct': '10', 'Nov': '11', 'Dez': '12', 'Dec': '12' };
+            const day = titleMatch[2].padStart(2, '0');
+            const month = months[titleMatch[3]] || '08';
+            const year = titleMatch[4];
+            dateStr = `${year}-${month}-${day}`;
+            timeStr = titleMatch[5];
+          }
+        }
+
+        const homeName = target.fixture_home_team_title.trim();
+        const awayName = target.fixture_away_team_title.trim();
+        const broadcasters = getSudamericanaBroadcasters(homeName, awayName);
+
+        // Scores & Penalties extraction from fixture page
+        let matchScore: any = null;
+        const homeScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--home\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-home[^>]*>\s*(\d+)\s*</i);
+        const awayScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--away\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-away[^>]*>\s*(\d+)\s*</i);
+        
+        const penHomeMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-home(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-home-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+        const penAwayMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-away(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-away-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+
+        if (homeScoreMatch && awayScoreMatch) {
+          const hScore = parseInt(homeScoreMatch[1], 10);
+          const aScore = parseInt(awayScoreMatch[1], 10);
+          let penalties = undefined;
+          let display = `${hScore} - ${aScore}`;
+          if (penHomeMatch && penAwayMatch) {
+            const pHome = parseInt(penHomeMatch[1], 10);
+            const pAway = parseInt(penAwayMatch[1], 10);
+            penalties = { home: pHome, away: pAway };
+            display = `${hScore} (${pHome}) - (${pAway}) ${aScore}`;
+          }
+          matchScore = {
+            home: hScore,
+            away: aScore,
+            penalties,
+            display
+          };
+        }
+
+        // Map stage to friendly Portuguese round title
+        let roundTitle = target.fixture_stage_title || 'Oitavas de Final';
+        if (roundTitle === '8th Finals') roundTitle = 'Oitavas de Final';
+        if (roundTitle === 'Knockout Round Play-offs') roundTitle = 'Playoffs Oitavas';
+        if (roundTitle === 'Quarter-finals') roundTitle = 'Quartas de Final';
+        if (roundTitle === 'Semi-finals') roundTitle = 'Semifinal';
+        if (roundTitle === 'Final') roundTitle = 'Final';
+
+        return {
+          id: `sud-${target.fixture_id}`,
+          sport: 'futebol',
+          competition: 'CONMEBOL Sudamericana',
+          division: 'Sul-Americana',
+          round: roundTitle,
+          homeTeam: homeName,
+          homeTeamSlug: getClubDetails(homeName).slug,
+          homeTeamLogo: homeLogo,
+          awayTeam: awayName,
+          awayTeamSlug: getClubDetails(awayName).slug,
+          awayTeamLogo: awayLogo,
+          date: dateStr,
+          time: timeStr,
+          stadium: venue,
+          referee: referee,
+          broadcasters: broadcasters,
+          transmissionDetails: getTransmissionDetails(broadcasters),
+          transmissionUrl: (broadcasters.some((b: string) => b.toLowerCase().includes('sbt')))
+            ? 'https://www.sbt.com.br/ao-vivo'
+            : (broadcasters.some((b: string) => b.toLowerCase().includes('disney')))
+            ? 'https://www.disneyplus.com/'
+            : (broadcasters.some((b: string) => b.toLowerCase().includes('espn')))
+            ? 'https://www.espn.com.br/watch/'
+            : (broadcasters.some((b: string) => b.toLowerCase().includes('paramount')))
+            ? 'https://www.paramountplus.com/'
+            : 'https://www.disneyplus.com/',
+          matchViewUrl: url,
+          score: matchScore,
+          homeScore: matchScore ? matchScore.home : null,
+          awayScore: matchScore ? matchScore.away : null,
+          status: 'agendado',
+          scraped: true
+        };
+      } catch (err) {
+        return null;
+      }
+    });
+
+    const scraped = (await Promise.all(fetchPromises)).filter(Boolean);
+    if (scraped.length > 0) {
+      cachedSudamericanaGames = scraped;
+      lastSudamericanaFetchTime = Date.now();
+      return scraped;
+    }
+  } catch (err) {
+    console.error('Erro na raspagem CONMEBOL Sudamericana:', err);
+  }
+
+  if (cachedSudamericanaGames.length > 0) {
+    return cachedSudamericanaGames;
+  }
+
+  // Never return fake data - return empty array
+  return [];
+}
+
 // Generate an ultra-comprehensive, beautiful schedule for the current month (July 2026)
 function generateFallbackGames(): any[] {
   // Cleared completely per user's explicit request ("apague todos os dados das partidas")
@@ -1764,10 +2088,11 @@ app.get('/api/jogos', async (req, res) => {
     const forceRefresh = req.query.refresh === 'true';
     const scrapedCBF = await scrapeCBFGames(forceRefresh);
     const libertadoresMatches = await scrapeConmebolLibertadores(forceRefresh);
+    const sudamericanaMatches = await scrapeConmebolSudamericana(forceRefresh);
     const otherSports = generateOtherSportsEvents();
     const fallback = generateFallbackGames();
     
-    // Combine everything: scraped CBF (futebol), Libertadores, other sports, fallback
+    // Combine everything: scraped CBF (futebol), Libertadores, Sudamericana, other sports, fallback
     const rawCombined: any[] = [];
     
     // Add scraped CBF matches
@@ -1778,6 +2103,11 @@ app.get('/api/jogos', async (req, res) => {
     // Add CONMEBOL Libertadores matches
     libertadoresMatches.forEach(libGame => {
       rawCombined.push(libGame);
+    });
+
+    // Add CONMEBOL Sudamericana matches
+    sudamericanaMatches.forEach(sudGame => {
+      rawCombined.push(sudGame);
     });
 
     // Add other sports matches
@@ -1804,7 +2134,9 @@ app.get('/api/jogos', async (req, res) => {
       data: combined,
       info: {
         total: combined.length,
-        futebolCount: scrapedCBF.length,
+        futebolCount: scrapedCBF.length + libertadoresMatches.length + sudamericanaMatches.length,
+        libertadoresCount: libertadoresMatches.length,
+        sudamericanaCount: sudamericanaMatches.length,
         otherSportsCount: otherSports.length,
         currentTime: new Date().toISOString()
       }

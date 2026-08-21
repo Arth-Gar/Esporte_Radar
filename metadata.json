@@ -1,6 +1,6 @@
 {
   "name": "Guia de Transmissões Futebol",
-  "description": "Lista dinâmica de jogos de futebol e esportes do mês com dados oficiais da CBF e CONMEBOL Libertadores, filtros de times, divisões, canais de transmissão e links diretos para assistir.",
+  "description": "Lista dinâmica de jogos de futebol e esportes do mês com dados oficiais da CBF, CONMEBOL Libertadores e CONMEBOL Sul-Americana, filtros de times, divisões, canais de transmissão e links diretos para assistir.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

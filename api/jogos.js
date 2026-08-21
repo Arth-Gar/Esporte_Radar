@@ -81,7 +81,32 @@ function getClubLogo(name) {
     'san lorenzo': 'https://images.fotmob.com/image_resources/logo/teamlogo/10082.png',
     'boca juniors': 'https://images.fotmob.com/image_resources/logo/teamlogo/10077.png',
     'peñarol': 'https://images.fotmob.com/image_resources/logo/teamlogo/10086.png',
-    'colo-colo': 'https://images.fotmob.com/image_resources/logo/teamlogo/10087.png'
+    'colo-colo': 'https://images.fotmob.com/image_resources/logo/teamlogo/10087.png',
+    'lanus': 'https://images.fotmob.com/image_resources/logo/teamlogo/10076.png',
+    'lanús': 'https://images.fotmob.com/image_resources/logo/teamlogo/10076.png',
+    'belgrano': 'https://images.fotmob.com/image_resources/logo/teamlogo/10075.png',
+    'rosario central': 'https://images.fotmob.com/image_resources/logo/teamlogo/10070.png',
+    'rosario': 'https://images.fotmob.com/image_resources/logo/teamlogo/10070.png',
+    'sportivo ameliano': 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/159.png?version=2026040801',
+    'ameliano': 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/159.png?version=2026040801',
+    'recoleta': 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/157.png?version=2026040801',
+    'deportivo recoleta': 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/157.png?version=2026040801',
+    'bolivar': 'https://images.fotmob.com/image_resources/logo/teamlogo/10090.png',
+    'bolívar': 'https://images.fotmob.com/image_resources/logo/teamlogo/10090.png',
+    'macara': 'https://images.fotmob.com/image_resources/logo/teamlogo/10130.png',
+    'macará': 'https://images.fotmob.com/image_resources/logo/teamlogo/10130.png',
+    'city torque': 'https://images.fotmob.com/image_resources/logo/teamlogo/10131.png',
+    'montevideo city torque': 'https://images.fotmob.com/image_resources/logo/teamlogo/10131.png',
+    'tigre': 'https://images.fotmob.com/image_resources/logo/teamlogo/10078.png',
+    'independiente santa fe': 'https://images.fotmob.com/image_resources/logo/teamlogo/10099.png',
+    'santa fe': 'https://images.fotmob.com/image_resources/logo/teamlogo/10099.png',
+    'cienciano': 'https://images.fotmob.com/image_resources/logo/teamlogo/10121.png',
+    'sporting cristal': 'https://images.fotmob.com/image_resources/logo/teamlogo/10108.png',
+    'caracas': 'https://images.fotmob.com/image_resources/logo/teamlogo/10106.png',
+    'ohiggins': 'https://images.fotmob.com/image_resources/logo/teamlogo/10132.png',
+    "o'higgins": 'https://images.fotmob.com/image_resources/logo/teamlogo/10132.png',
+    'rb bragantino': 'https://conteudo.cbf.com.br/clubes/20018/escudo.jpg',
+    'red bull bragantino': 'https://conteudo.cbf.com.br/clubes/20018/escudo.jpg'
   };
 
   for (const [k, v] of Object.entries(logos)) {
@@ -175,6 +200,217 @@ function getLibertadoresBroadcasters(homeName, awayName) {
   }
 
   return ['ESPN', 'Disney+'];
+}
+
+function getSudamericanaBroadcasters(homeName, awayName) {
+  const combined = `${homeName} ${awayName}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  if (combined.includes('sao paulo') || combined.includes('são paulo')) {
+    return ['SBT', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('santos') || combined.includes('macara')) {
+    return ['SBT', 'Paramount+'];
+  }
+  if (combined.includes('atletico mineiro') || combined.includes('atletico-mg') || combined.includes('bragantino')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('botafogo') || combined.includes('cienciano')) {
+    return ['Paramount+', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('vasco') || combined.includes('olimpia')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('boca') || combined.includes('recoleta')) {
+    return ['Paramount+', 'Disney+'];
+  }
+  if (combined.includes('river') || combined.includes('santa fe')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('tigre') || combined.includes('torque')) {
+    return ['Paramount+'];
+  }
+  if (combined.includes('gremio') || combined.includes('bolivar')) {
+    return ['ESPN', 'Disney+'];
+  }
+  if (combined.includes('lanus') || combined.includes('lanús')) {
+    return ['Paramount+'];
+  }
+  if (combined.includes('corinthians')) {
+    return ['SBT', 'ESPN', 'Disney+'];
+  }
+  if (combined.includes('cruzeiro')) {
+    return ['SBT', 'Paramount+'];
+  }
+  if (combined.includes('athletico') || combined.includes('fortaleza')) {
+    return ['ESPN', 'Disney+'];
+  }
+
+  return ['ESPN', 'Disney+', 'Paramount+'];
+}
+
+async function scrapeConmebolSudamericana() {
+  let fixtureIds = [1518, 1527, 1521, 1512, 1530, 1563, 1567, 1560, 1573, 1570, 1579, 1557, 1564, 1581, 1599, 1576, 1587, 1584, 1593, 1596, 1590, 1685, 1707, 1710, 1686, 1701, 1704];
+  
+  try {
+    const hubRes = await fetch('https://gol.conmebol.com/sudamericana/pt-br', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      signal: AbortSignal.timeout(3000)
+    });
+    if (hubRes.ok) {
+      const hubHtml = await hubRes.text();
+      const matches = [...hubHtml.matchAll(/\/sudamericana\/pt-br\/fixture\/view\/(\d+)/g)];
+      const scrapedIds = matches.map(m => parseInt(m[1], 10)).filter(n => !isNaN(n));
+      if (scrapedIds.length > 0) {
+        fixtureIds = [...new Set([...scrapedIds, ...fixtureIds])];
+      }
+    }
+  } catch (hubErr) {
+    // Keep fallback list of official fixture IDs
+  }
+
+  try {
+    const fetchPromises = fixtureIds.map(async (id) => {
+      try {
+        const url = `https://gol.conmebol.com/sudamericana/pt-br/fixture/view/${id}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        const html = await res.text();
+        const dm = html.match(/data-drupal-selector="drupal-settings-json">([\s\S]*?)<\/script>/);
+        if (!dm) return null;
+        const d = JSON.parse(dm[1]);
+        const target = d?.metadata?.targeting;
+        if (!target || !target.fixture_id || !target.fixture_home_team_title || target.fixture_home_team_title === 'TBD') return null;
+
+        const venueMatch = html.match(/class=["']m-match-centre-hero__venue["'][^>]*>([^<]+)<\/div>/i) ||
+                           html.match(/class=["']m-match-fixture-details__stadium["'][^>]*>([^<]+)<\/div>/i);
+        const venue = venueMatch ? venueMatch[1].trim() : 'Estádio a confirmar';
+
+        const refereeMatch = html.match(/Árbitro<\/span>\s*<span[^>]*>([^<]+)<\/span>/i) ||
+                             html.match(/class="m-match-fixture-details__list-item-value">([^<]+)<\/span>/i);
+        const referee = refereeMatch ? refereeMatch[1].trim() : '';
+
+        const crestVersion = d?.clubcastCore?.dataPlatform?.crestVersion || '2026040801';
+        const homeLogo = target.fixture_home_team_id
+          ? `https://gol-cdn.conmebol.com/icons/team/light/3x/id/${target.fixture_home_team_id}.png?version=${crestVersion}`
+          : getClubLogo(target.fixture_home_team_title);
+        const awayLogo = target.fixture_away_team_id
+          ? `https://gol-cdn.conmebol.com/icons/team/light/3x/id/${target.fixture_away_team_id}.png?version=${crestVersion}`
+          : getClubLogo(target.fixture_away_team_title);
+
+        let dateStr = '';
+        let timeStr = '21:30';
+
+        if (target.fixture_date) {
+          const dt = new Date(target.fixture_date * 1000);
+          const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          });
+          const timeFormatter = new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          });
+          dateStr = dateFormatter.format(dt);
+          timeStr = timeFormatter.format(dt);
+        } else {
+          const titleMatch = target.fixture_title?.match(/\(([A-Za-z]{3}),\s*(\d{1,2})\s*([A-Za-z]{3})\s*(\d{4})\s*-\s*(\d{2}:\d{2})\)/);
+          if (titleMatch) {
+            const months = { 'Jan': '01', 'Fev': '02', 'Feb': '02', 'Mar': '03', 'Abr': '04', 'Apr': '04', 'Mai': '05', 'May': '05', 'Jun': '06', 'Jul': '07', 'Ago': '08', 'Aug': '08', 'Set': '09', 'Sep': '09', 'Out': '10', 'Oct': '10', 'Nov': '11', 'Dez': '12', 'Dec': '12' };
+            const day = titleMatch[2].padStart(2, '0');
+            const month = months[titleMatch[3]] || '08';
+            const year = titleMatch[4];
+            dateStr = `${year}-${month}-${day}`;
+            timeStr = titleMatch[5];
+          }
+        }
+
+        const homeName = target.fixture_home_team_title.trim();
+        const awayName = target.fixture_away_team_title.trim();
+        const broadcasters = getSudamericanaBroadcasters(homeName, awayName);
+
+        // Scores & Penalties extraction from fixture page
+        let matchScore = null;
+        const homeScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--home\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-home[^>]*>\s*(\d+)\s*</i);
+        const awayScoreMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--away\b[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                               html.match(/js--live-fixture-score-away[^>]*>\s*(\d+)\s*</i);
+        
+        const penHomeMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-home(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-home-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+        const penAwayMatch = html.match(/class=["'][^"']*m-match-centre-hero__score--pen-away(?![^"']*hide)[^"']*["'][^>]*>\s*(\d+)\s*</i) ||
+                             html.match(/js--live-fixture-score-away-pen(?![^"']*hide)[^>]*>\s*(\d+)\s*</i);
+
+        if (homeScoreMatch && awayScoreMatch) {
+          const hScore = parseInt(homeScoreMatch[1], 10);
+          const aScore = parseInt(awayScoreMatch[1], 10);
+          let penalties = undefined;
+          let display = `${hScore} - ${aScore}`;
+          if (penHomeMatch && penAwayMatch) {
+            const pHome = parseInt(penHomeMatch[1], 10);
+            const pAway = parseInt(penAwayMatch[1], 10);
+            penalties = { home: pHome, away: pAway };
+            display = `${hScore} (${pHome}) - (${pAway}) ${aScore}`;
+          }
+          matchScore = {
+            home: hScore,
+            away: aScore,
+            penalties,
+            display
+          };
+        }
+
+        let roundTitle = target.fixture_stage_title || 'Oitavas de Final';
+        if (roundTitle === '8th Finals') roundTitle = 'Oitavas de Final';
+        if (roundTitle === 'Knockout Round Play-offs') roundTitle = 'Playoffs Oitavas';
+        if (roundTitle === 'Quarter-finals') roundTitle = 'Quartas de Final';
+        if (roundTitle === 'Semi-finals') roundTitle = 'Semifinal';
+        if (roundTitle === 'Final') roundTitle = 'Final';
+
+        return {
+          id: `sud-${target.fixture_id}`,
+          sport: 'futebol',
+          competition: 'CONMEBOL Sudamericana',
+          division: 'Sul-Americana',
+          round: roundTitle,
+          homeTeam: homeName,
+          homeTeamLogo: homeLogo,
+          awayTeam: awayName,
+          awayTeamLogo: awayLogo,
+          date: dateStr,
+          time: timeStr,
+          stadium: venue,
+          referee: referee,
+          broadcasters: broadcasters,
+          matchViewUrl: url,
+          score: matchScore,
+          homeScore: matchScore ? matchScore.home : null,
+          awayScore: matchScore ? matchScore.away : null,
+          status: 'agendado',
+          scraped: true
+        };
+      } catch (err) {
+        return null;
+      }
+    });
+
+    const scraped = (await Promise.all(fetchPromises)).filter(Boolean);
+    if (scraped.length > 0) return scraped;
+  } catch (err) {
+    console.warn('Erro ao raspar CONMEBOL Sudamericana em Vercel:', err);
+  }
+  return []; // Never return fake data
 }
 
 async function scrapeConmebolLibertadores() {
@@ -1004,11 +1240,14 @@ export default async function handler(req, res) {
       }
     }
 
-    const libertadoresEvents = await scrapeConmebolLibertadores();
+    const [libertadoresEvents, sudamericanaEvents] = await Promise.all([
+      scrapeConmebolLibertadores(),
+      scrapeConmebolSudamericana()
+    ]);
     const otherSports = getOtherSportsEvents();
     
     // Combine and apply calculateMatchStatus
-    const rawCombined = [...scrapedGames, ...libertadoresEvents, ...otherSports];
+    const rawCombined = [...scrapedGames, ...libertadoresEvents, ...sudamericanaEvents, ...otherSports];
     const combinedData = rawCombined.map(match => ({
       ...match,
       status: calculateMatchStatus(match.date, match.time, match.rawStatus || match.status)
@@ -1023,6 +1262,7 @@ export default async function handler(req, res) {
       info: {
         scrapedCount: scrapedGames.length,
         libertadoresCount: libertadoresEvents.length,
+        sudamericanaCount: sudamericanaEvents.length,
         otherSportsCount: otherSports.length,
         total: combinedData.length
       },
@@ -1031,10 +1271,13 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("Erro no proxy Serverless da CBF:", error);
-    // Even if CBF fails, return curated events with calculated status
-    const libertadoresEvents = await scrapeConmebolLibertadores();
+    // Even if CBF fails, return scraped CONMEBOL events with calculated status
+    const [libertadoresEvents, sudamericanaEvents] = await Promise.all([
+      scrapeConmebolLibertadores(),
+      scrapeConmebolSudamericana()
+    ]);
     const otherSports = getOtherSportsEvents();
-    const rawFallback = [...libertadoresEvents, ...otherSports];
+    const rawFallback = [...libertadoresEvents, ...sudamericanaEvents, ...otherSports];
     const fallbackData = rawFallback.map(match => ({
       ...match,
       status: calculateMatchStatus(match.date, match.time, match.rawStatus || match.status)

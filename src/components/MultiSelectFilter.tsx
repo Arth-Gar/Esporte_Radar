@@ -107,7 +107,7 @@ export function MultiSelectFilter({
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs font-semibold rounded border transition-all cursor-pointer text-left ${
           !isAllSelected
-            ? 'bg-[#0b2b1a] border-seagreen/60 text-white shadow-sm ring-1 ring-seagreen/30'
+            ? 'bg-[#0b2b1a] border-seagreen/60 text-white'
             : 'bg-[#092215] border-green-950/60 text-slate-200 hover:border-green-800/80 hover:text-white'
         }`}
       >
@@ -137,7 +137,7 @@ export function MultiSelectFilter({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-[#04120a] border border-green-800/80 rounded-lg shadow-2xl p-1.5 space-y-1 custom-scrollbar backdrop-blur-md"
+            className="absolute top-full left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto bg-[#04120a] border border-green-800/80 rounded-lg p-1.5 space-y-1 custom-scrollbar backdrop-blur-md"
           >
             {/* "All" Option */}
             <button

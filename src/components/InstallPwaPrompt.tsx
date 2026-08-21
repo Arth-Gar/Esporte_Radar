@@ -136,7 +136,7 @@ export function InstallPwaPrompt() {
                 <div className="flex items-center gap-2 pt-1 border-t border-green-950/80">
                   <button
                     onClick={handleInstallClick}
-                    className="flex-1 py-2.5 px-3 rounded-xl bg-seagreen hover:bg-seagreen-solid text-white font-black text-xs uppercase tracking-wider transition-all shadow-md hover:shadow-seagreen/30 cursor-pointer flex items-center justify-center gap-2"
+                    className="flex-1 py-2.5 px-3 rounded-xl bg-seagreen hover:bg-seagreen-solid text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <PlusCircle className="h-4 w-4" />
                     <span>Adicionar à Tela Inicial</span>

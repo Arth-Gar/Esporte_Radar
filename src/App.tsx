@@ -355,6 +355,12 @@ export default function App() {
            ((m as any).competition && (m as any).competition.toLowerCase().includes('libertadores'));
   };
 
+  // Helper to check if a match is CONMEBOL Sudamericana
+  const isSulAmericanaMatch = (m: FootballMatch) => {
+    return (m.division && (m.division.toLowerCase().includes('sul-americana') || m.division.toLowerCase().includes('sudamericana') || m.division.toLowerCase().includes('sul americana'))) || 
+           ((m as any).competition && ((m as any).competition.toLowerCase().includes('sudamericana') || (m as any).competition.toLowerCase().includes('sul-americana')));
+  };
+
   // Filter lists derived from active sport
   const sportMatches = matches.filter(m => {
     return (m.sport || 'futebol') === activeSport;
@@ -364,12 +370,13 @@ export default function App() {
     new Set(sportMatches.flatMap(m => m.broadcasters).filter((b): b is string => Boolean(b)))
   ).sort((a: string, b: string) => a.localeCompare(b));
   
-  // Natural football division ordering with Libertadores prominently featured
+  // Natural football division ordering with Libertadores and Sul-Americana prominently featured
   const preferredDivisionOrder = [
     'Série A',
     'Série B',
     'Copa do Brasil',
     'Libertadores',
+    'Sul-Americana',
     'Série C',
     'Série D',
     'Feminino',
@@ -579,6 +586,9 @@ export default function App() {
     if (name.includes('libertadores')) {
       return 'bg-amber-950/80 text-amber-300 border border-amber-500/50';
     }
+    if (name.includes('sul-americana') || name.includes('sudamericana') || name.includes('sul americana')) {
+      return 'bg-blue-950/80 text-blue-300 border border-blue-500/50';
+    }
     if (name.includes('série a') || name.includes('serie a')) {
       return 'bg-green-950/80 text-green-300 border border-green-700/40';
     }
@@ -651,7 +661,7 @@ export default function App() {
                 onClick={() => setShowPreferencesModal(true)}
                 title="receba a notificação dos times favoritos e divisões desejadas."
                 aria-label="receba a notificação dos times favoritos e divisões desejadas."
-                className="relative p-2 sm:px-2.5 sm:py-2 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-center"
+                className="relative p-2 sm:px-2.5 sm:py-2 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/50 hover:border-amber-400 text-amber-300 hover:text-white transition-all duration-200 cursor-pointer flex items-center justify-center"
               >
                 <div className="relative flex items-center justify-center w-5 h-5">
                   <Bell className="h-5 w-5 text-amber-300 group-hover:text-amber-200 transition-colors" />
@@ -659,7 +669,7 @@ export default function App() {
                 </div>
 
                 {preferences.favoriteTeams.length > 0 && (
-                  <span className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-black font-mono font-black flex items-center justify-center shadow">
+                  <span className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-black font-mono font-black flex items-center justify-center">
                     {preferences.favoriteTeams.length}
                   </span>
                 )}
@@ -674,7 +684,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-[#020704]/60 px-3.5 py-2 border border-green-950/60 rounded flex items-center gap-2 shadow-inner hidden md:flex">
+            <div className="bg-[#020704]/60 px-3.5 py-2 border border-green-950/60 rounded flex items-center gap-2 hidden md:flex">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               <span className="text-xs font-semibold uppercase tracking-wider text-green-300">
                 {liveCount} {liveCount === 1 ? 'Ao Vivo' : 'Ao Vivo'}
@@ -693,7 +703,7 @@ export default function App() {
       </header>
 
       {/* SPORTS MODALITY TAB SELECTOR */}
-      <nav className="bg-[#031109] border-b border-green-950 px-6 md:px-8 py-3 shrink-0 shadow-md">
+      <nav className="bg-[#031109] border-b border-green-950 px-6 md:px-8 py-3 shrink-0">
         <div className="max-w-7xl mx-auto flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
           <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0 mr-1 flex items-center gap-1">
             <TrendingUp className="h-3.5 w-3.5 text-seagreen" /> Modalidade:
@@ -715,7 +725,7 @@ export default function App() {
                 }}
                 className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg shrink-0 transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wider ${
                   isActive
-                    ? 'bg-seagreen text-white shadow-sm scale-102 ring-1 ring-seagreen/40'
+                    ? 'bg-seagreen text-white font-black'
                     : 'bg-[#081f13] text-emerald-300 hover:bg-[#0e2f1f] hover:text-white'
                 }`}
               >
@@ -754,7 +764,7 @@ export default function App() {
                 onClick={() => setOnlyFavoritesFilter(!onlyFavoritesFilter)}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-md shrink-0 transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider ${
                   onlyFavoritesFilter
-                    ? 'bg-amber-500 text-black shadow-sm ring-1 ring-amber-400 font-black'
+                    ? 'bg-amber-500 text-black font-black'
                     : 'bg-amber-950/30 text-amber-300 border border-amber-500/40 hover:bg-amber-900/50 hover:text-white'
                 }`}
                 title="Filtrar para ver somente partidas dos meus times favoritados"
@@ -779,7 +789,7 @@ export default function App() {
                 }}
                 className={`px-2.5 py-1 text-[11px] font-bold rounded-md shrink-0 transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider ${
                   selectedDivisions.length === 0 && !onlyFavoritesFilter
-                    ? 'bg-seagreen text-white shadow-sm ring-1 ring-seagreen/40 font-black'
+                    ? 'bg-seagreen text-white font-black'
                     : 'bg-[#092215] text-slate-300 border border-green-950 hover:border-green-800 hover:text-white'
                 }`}
               >
@@ -813,8 +823,8 @@ export default function App() {
                     className={`px-2.5 py-1 text-[11px] font-bold rounded-md shrink-0 transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider ${
                       isSelected
                         ? isLibertadores
-                          ? 'bg-amber-500 text-black shadow-sm ring-1 ring-amber-400 font-black'
-                          : 'bg-seagreen text-white shadow-sm ring-1 ring-seagreen/40 font-black'
+                          ? 'bg-amber-500 text-black font-black'
+                          : 'bg-seagreen text-white font-black'
                         : isLibertadores
                           ? 'bg-amber-950/40 text-amber-300 border border-amber-500/30 hover:bg-amber-900/50 hover:text-white'
                           : 'bg-[#092215] text-slate-300 border border-green-950 hover:border-green-800 hover:text-white'
@@ -964,7 +974,7 @@ export default function App() {
                       onClick={() => setIncludeFinished(!includeFinished)}
                       className={`px-3 py-2 rounded text-xs font-bold transition-all uppercase tracking-wider flex items-center gap-2 border cursor-pointer ${
                         includeFinished
-                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/80 shadow-sm'
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/80'
                           : 'bg-[#092215] text-slate-400 border-green-900/30 hover:text-white'
                       }`}
                       title="Partidas finalizadas ficam ocultas por padrão e aparecem em segundo plano"
@@ -1037,7 +1047,7 @@ export default function App() {
                           onClick={() => setSelectedDay(day)}
                           className={`px-2.5 py-1 text-[10px] font-bold rounded shrink-0 transition-all cursor-pointer flex flex-col items-center justify-center min-w-[38px] relative ${
                             isSelected
-                              ? 'bg-seagreen text-white font-extrabold shadow-sm border border-seagreen'
+                              ? 'bg-seagreen text-white font-extrabold border border-seagreen'
                               : isToday
                                 ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/60 hover:bg-emerald-900/50'
                                 : 'bg-[#092215] text-green-300 hover:text-white'
@@ -1106,6 +1116,42 @@ export default function App() {
                     className="shrink-0 px-3.5 py-2 rounded-lg bg-amber-500/20 border border-amber-500/50 hover:bg-amber-500/30 text-amber-300 text-xs font-bold transition-all flex items-center justify-center gap-2 group"
                   >
                     <span>Portal Oficial CONMEBOL</span>
+                    <ExternalLink className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {/* CONMEBOL Sudamericana Official Tournament Banner when Sul-Americana is selected */}
+            {activeSport === 'futebol' && selectedDivisions.some(d => d.toLowerCase().includes('sul-americana') || d.toLowerCase().includes('sudamericana') || d.toLowerCase().includes('sul americana')) && (
+              <div className="bg-gradient-to-r from-blue-950/60 via-[#0d1e18] to-blue-950/60 border border-blue-500/40 rounded-xl p-4 md:p-5 shadow-lg relative overflow-hidden">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/50 flex items-center justify-center text-2xl shrink-0 shadow-inner">
+                      🛡️
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-base md:text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
+                          CONMEBOL Sudamericana 2026
+                        </h2>
+                        <span className="px-2 py-0.5 text-[9px] font-extrabold uppercase rounded bg-blue-500 text-white">
+                          Fase Final
+                        </span>
+                      </div>
+                      <p className="text-xs text-blue-200/80 mt-1 max-w-2xl leading-relaxed">
+                        Acompanhe todos os confrontos da Copa Sul-Americana com dados diretos do portal oficial da CONMEBOL e transmissões no SBT, ESPN, Disney+ e Paramount+.
+                      </p>
+                    </div>
+                  </div>
+
+                  <a 
+                    href="https://gol.conmebol.com/sudamericana/pt-br" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="shrink-0 px-3.5 py-2 rounded-lg bg-blue-500/20 border border-blue-500/50 hover:bg-blue-500/30 text-blue-300 text-xs font-bold transition-all flex items-center justify-center gap-2 group"
+                  >
+                    <span>Portal Oficial Sudamericana</span>
                     <ExternalLink className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </a>
                 </div>

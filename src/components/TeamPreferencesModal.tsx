@@ -81,10 +81,10 @@ export function TeamPreferencesModal({
     });
 
     // Default major Brazilian divisions list if not already present
-    const defaultDivs = ['Série A', 'Série B', 'Copa do Brasil', 'Libertadores', 'Série C', 'Série D', 'Feminino', 'Sub-20', 'Sub-17'];
+    const defaultDivs = ['Série A', 'Série B', 'Copa do Brasil', 'Libertadores', 'Sul-Americana', 'Série C', 'Série D', 'Feminino', 'Sub-20', 'Sub-17'];
     defaultDivs.forEach(d => divisionSet.add(d));
 
-    const preferredOrder = ['Série A', 'Série B', 'Copa do Brasil', 'Libertadores', 'Série C', 'Série D', 'Feminino', 'Sub-20', 'Sub-17', 'Sub-15'];
+    const preferredOrder = ['Série A', 'Série B', 'Copa do Brasil', 'Libertadores', 'Sul-Americana', 'Série C', 'Série D', 'Feminino', 'Sub-20', 'Sub-17', 'Sub-15'];
     const sortedDivisions = Array.from(divisionSet).sort((a, b) => {
       const idxA = preferredOrder.indexOf(a);
       const idxB = preferredOrder.indexOf(b);
@@ -415,7 +415,7 @@ export function TeamPreferencesModal({
                     {notificationStatus !== 'denied' && (
                       <button
                         onClick={handleRequestPermission}
-                        className="px-3.5 py-2 bg-amber-500 text-black hover:bg-amber-400 text-xs font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider shrink-0 flex items-center justify-center gap-1.5 shadow"
+                        className="px-3.5 py-2 bg-amber-500 text-black hover:bg-amber-400 text-xs font-bold rounded-lg transition-all cursor-pointer uppercase tracking-wider shrink-0 flex items-center justify-center gap-1.5"
                       >
                         <Bell className="h-4 w-4 fill-black" />
                         Ativar Notificações

@@ -23,6 +23,16 @@
   background: rgba(34, 197, 94, 0.5);
 }
 
+/* Remove default outlines, white borders and box-shadow rings on all buttons */
+button,
+button:focus,
+button:focus-visible,
+button:active {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
 .bg-seagreen {
   background-color: color-mix(in oklab, oklch(0.77 0.16 199.2) 55%, transparent);
 }
