@@ -33,6 +33,7 @@ import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { Preloader } from './components/Preloader';
 import { TeamPreferencesModal } from './components/TeamPreferencesModal';
 import { NotificationToastContainer } from './components/NotificationToastContainer';
+import { MultiSelectFilter, MultiSelectOption } from './components/MultiSelectFilter';
 import { 
   getStoredPreferences, 
   savePreferences, 
@@ -145,11 +146,11 @@ export default function App() {
   const currentMonthName = monthNames[currentMonthIndex];
   const daysInCurrentMonth = new Date(currentYearNumber, currentMonthIndex + 1, 0).getDate();
 
-  // Filters state
+  // Filters state (supporting multi-select for divisions, broadcasters, status and day)
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDivision, setSelectedDivision] = useState<string>('Tudo');
-  const [selectedBroadcaster, setSelectedBroadcaster] = useState<string>('Tudo');
-  const [selectedStatus, setSelectedStatus] = useState<'Tudo' | 'ao_vivo' | 'agendado' | 'finalizado'>('Tudo');
+  const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
+  const [selectedBroadcasters, setSelectedBroadcasters] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | 'Tudo'>('Tudo');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -359,7 +360,9 @@ export default function App() {
     return (m.sport || 'futebol') === activeSport;
   });
 
-  const broadcastersList = ['Tudo', ...Array.from(new Set(sportMatches.flatMap(m => m.broadcasters)))];
+  const rawBroadcasters: string[] = Array.from<string>(
+    new Set(sportMatches.flatMap(m => m.broadcasters).filter((b): b is string => Boolean(b)))
+  ).sort((a: string, b: string) => a.localeCompare(b));
   
   // Natural football division ordering with Libertadores prominently featured
   const preferredDivisionOrder = [
@@ -387,7 +390,26 @@ export default function App() {
 
   const divisionsList: string[] = ['Tudo', ...rawDivisions];
   
-  // Apply filtering rules
+  // Options for MultiSelect dropdowns
+  const divisionOptions: MultiSelectOption[] = rawDivisions.map(div => ({
+    value: div,
+    label: div,
+    count: sportMatches.filter(m => m.division === div).length,
+  }));
+
+  const broadcasterOptions: MultiSelectOption[] = rawBroadcasters.map(b => ({
+    value: b,
+    label: b,
+    count: sportMatches.filter(m => m.broadcasters.includes(b)).length,
+  }));
+
+  const statusOptions: MultiSelectOption[] = [
+    { value: 'ao_vivo', label: 'Ao Vivo Agora', count: sportMatches.filter(m => m.status === 'ao_vivo').length },
+    { value: 'agendado', label: 'Agendados (Próximos)', count: sportMatches.filter(m => m.status === 'agendado').length },
+    { value: 'finalizado', label: 'Finalizados (Encerrados)', count: sportMatches.filter(m => m.status === 'finalizado').length },
+  ];
+  
+  // Apply filtering rules (supporting multiple selections per category)
   const filteredMatches = sportMatches.filter(match => {
     const matchDay = parseInt(match.date.split('-')[2]);
     
@@ -414,18 +436,19 @@ export default function App() {
       }
     }
 
-    // Division filter
-    const matchesDivision = selectedDivision === 'Tudo' || match.division === selectedDivision;
+    // Division filter (multi-select: matches if any selected division matches, or if empty = all)
+    const matchesDivision = selectedDivisions.length === 0 || selectedDivisions.includes(match.division);
 
-    // Broadcaster filter
-    const matchesBroadcaster = selectedBroadcaster === 'Tudo' || match.broadcasters.includes(selectedBroadcaster);
+    // Broadcaster filter (multi-select: matches if any selected broadcaster is present in the match)
+    const matchesBroadcaster = selectedBroadcasters.length === 0 || 
+      match.broadcasters.some(b => selectedBroadcasters.includes(b));
 
-    // Status filter (finalizados são segundo plano, excluídos por padrão)
+    // Status filter (multi-select: if specific statuses selected, match them; else respect includeFinished toggle)
     let matchesStatus = false;
-    if (selectedStatus === 'Tudo') {
-      matchesStatus = includeFinished ? true : match.status !== 'finalizado';
+    if (selectedStatuses.length > 0) {
+      matchesStatus = selectedStatuses.includes(match.status);
     } else {
-      matchesStatus = match.status === selectedStatus;
+      matchesStatus = includeFinished ? true : match.status !== 'finalizado';
     }
 
     // Day of Month filter
@@ -686,8 +709,9 @@ export default function App() {
                 key={sport.id}
                 onClick={() => {
                   setActiveSport(sport.id);
-                  setSelectedDivision('Tudo');
-                  setSelectedBroadcaster('Tudo');
+                  setSelectedDivisions([]);
+                  setSelectedBroadcasters([]);
+                  setSelectedStatuses([]);
                 }}
                 className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg shrink-0 transition-all cursor-pointer flex items-center gap-2 uppercase tracking-wider ${
                   isActive
@@ -746,9 +770,32 @@ export default function App() {
 
               <span className="text-green-900 text-xs shrink-0">|</span>
 
-              {divisionsList.map(div => {
-                const isSelected = selectedDivision === div && !onlyFavoritesFilter;
-                const count = div === 'Tudo' ? sportMatches.length : sportMatches.filter(m => m.division === div).length;
+              {/* All Divisions Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedDivisions([]);
+                  if (onlyFavoritesFilter) setOnlyFavoritesFilter(false);
+                }}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded-md shrink-0 transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider ${
+                  selectedDivisions.length === 0 && !onlyFavoritesFilter
+                    ? 'bg-seagreen text-white shadow-sm ring-1 ring-seagreen/40 font-black'
+                    : 'bg-[#092215] text-slate-300 border border-green-950 hover:border-green-800 hover:text-white'
+                }`}
+              >
+                <span>Todas Divisões</span>
+                <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                  selectedDivisions.length === 0 && !onlyFavoritesFilter
+                    ? 'bg-black/60 text-green-300 font-bold'
+                    : 'bg-black/40 text-green-400'
+                }`}>
+                  {sportMatches.length}
+                </span>
+              </button>
+
+              {rawDivisions.map(div => {
+                const isSelected = selectedDivisions.includes(div);
+                const count = sportMatches.filter(m => m.division === div).length;
                 const isLibertadores = div.toLowerCase().includes('libertadores');
 
                 return (
@@ -756,7 +803,11 @@ export default function App() {
                     key={div}
                     type="button"
                     onClick={() => {
-                      setSelectedDivision(div);
+                      if (isSelected) {
+                        setSelectedDivisions(selectedDivisions.filter(d => d !== div));
+                      } else {
+                        setSelectedDivisions([...selectedDivisions, div]);
+                      }
                       if (onlyFavoritesFilter) setOnlyFavoritesFilter(false);
                     }}
                     className={`px-2.5 py-1 text-[11px] font-bold rounded-md shrink-0 transition-all cursor-pointer flex items-center gap-1.5 uppercase tracking-wider ${
@@ -770,7 +821,7 @@ export default function App() {
                     }`}
                   >
                     {isLibertadores && <span>🏆</span>}
-                    <span>{div === 'Tudo' ? 'Todas Divisões' : div}</span>
+                    <span>{div}</span>
                     <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
                       isSelected 
                         ? isLibertadores ? 'bg-black text-amber-300 font-bold' : 'bg-black/60 text-green-300 font-bold'
@@ -791,7 +842,7 @@ export default function App() {
               className="flex items-center gap-2 text-xs font-bold text-emerald-300 hover:text-white uppercase tracking-widest cursor-pointer select-none"
             >
               <SlidersHorizontal className="h-4 w-4 text-seagreen" />
-              <span>Mais Filtros e Busca</span>
+              <span>Mais Filtros e Busca Multi-Seleção</span>
               {showFilters ? <ChevronUp className="h-4 w-4 text-seagreen" /> : <ChevronDown className="h-4 w-4 text-seagreen" />}
             </button>
             
@@ -803,19 +854,21 @@ export default function App() {
                     "{searchTerm}"
                   </span>
                 )}
-                {selectedDivision !== 'Tudo' && (
+                {selectedDivisions.length > 0 && (
                   <span className="bg-[#092215] px-2 py-0.5 rounded border border-green-900/30">
-                    {selectedDivision}
+                    {selectedDivisions.length === 1 ? selectedDivisions[0] : `${selectedDivisions.length} Divisões`}
                   </span>
                 )}
-                {selectedBroadcaster !== 'Tudo' && (
+                {selectedBroadcasters.length > 0 && (
                   <span className="bg-[#092215] px-2 py-0.5 rounded border border-green-900/30">
-                    {selectedBroadcaster}
+                    {selectedBroadcasters.length === 1 ? selectedBroadcasters[0] : `${selectedBroadcasters.length} Canais`}
                   </span>
                 )}
-                {selectedStatus !== 'Tudo' && (
+                {selectedStatuses.length > 0 && (
                   <span className="bg-[#092215] px-2 py-0.5 rounded border border-green-900/30">
-                    {selectedStatus === 'ao_vivo' ? 'Ao Vivo' : selectedStatus === 'agendado' ? 'Agendados' : 'Finalizados'}
+                    {selectedStatuses.length === 1 
+                      ? (selectedStatuses[0] === 'ao_vivo' ? 'Ao Vivo' : selectedStatuses[0] === 'agendado' ? 'Agendados' : 'Finalizados')
+                      : `${selectedStatuses.length} Situações`}
                   </span>
                 )}
                 {selectedDay !== 'Tudo' && (
@@ -823,14 +876,14 @@ export default function App() {
                     Dia {selectedDay}
                   </span>
                 )}
-                {(searchTerm || selectedDivision !== 'Tudo' || selectedBroadcaster !== 'Tudo' || selectedStatus !== 'Tudo' || selectedDay !== 'Tudo') && (
+                {(searchTerm || selectedDivisions.length > 0 || selectedBroadcasters.length > 0 || selectedStatuses.length > 0 || selectedDay !== 'Tudo') && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setSearchTerm('');
-                      setSelectedDivision('Tudo');
-                      setSelectedBroadcaster('Tudo');
-                      setSelectedStatus('Tudo');
+                      setSelectedDivisions([]);
+                      setSelectedBroadcasters([]);
+                      setSelectedStatuses([]);
                       setSelectedDay('Tudo');
                     }}
                     className="text-red-400 hover:text-red-300 ml-1 font-bold uppercase text-[9px] cursor-pointer"
@@ -853,11 +906,11 @@ export default function App() {
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   
-                  {/* Input Filters Grid */}
+                  {/* Input Multi-Select Filters Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
                     
                     {/* Search */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Busca</span>
                       <div className="relative w-full">
                         <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-green-600" />
@@ -866,61 +919,46 @@ export default function App() {
                           value={searchTerm}
                           onChange={e => setSearchTerm(e.target.value)}
                           placeholder="Time, estádio..."
-                          className="w-full bg-[#092215] border-none text-xs rounded pl-8 pr-3 py-2 text-white placeholder:text-green-700 focus:ring-1 focus:ring-seagreen outline-none transition-all"
+                          className="w-full bg-[#092215] border border-green-950/60 text-xs rounded pl-8 pr-3 py-2 text-white placeholder:text-green-700 focus:ring-1 focus:ring-seagreen outline-none transition-all"
                         />
                       </div>
                     </div>
 
-                    {/* Division */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Divisão</span>
-                      <select 
-                        value={selectedDivision}
-                        onChange={e => setSelectedDivision(e.target.value)}
-                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
-                      >
-                        <option value="Tudo" className="uppercase bg-[#081f13]">Todas as Divisões</option>
-                        {divisionsList.filter(d => d !== 'Tudo').map(d => (
-                          <option key={d} value={d} className="uppercase bg-[#081f13]">{d}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Multi-Select Division */}
+                    <MultiSelectFilter
+                      id="filter-divisions"
+                      label="Divisões / Torneios"
+                      options={divisionOptions}
+                      selectedValues={selectedDivisions}
+                      onChange={setSelectedDivisions}
+                      allLabel="Todas as Divisões"
+                    />
 
-                    {/* Broadcaster */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Canal</span>
-                      <select
-                        value={selectedBroadcaster}
-                        onChange={e => setSelectedBroadcaster(e.target.value)}
-                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
-                      >
-                        {broadcastersList.map(b => (
-                          <option key={b} value={b} className="uppercase bg-[#081f13]">
-                            {b === 'Tudo' ? 'Todas as Plataformas' : b}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Multi-Select Broadcaster */}
+                    <MultiSelectFilter
+                      id="filter-broadcasters"
+                      label="Plataformas / Canais"
+                      options={broadcasterOptions}
+                      selectedValues={selectedBroadcasters}
+                      onChange={setSelectedBroadcasters}
+                      allLabel="Todas as Plataformas"
+                      icon={<Tv className="h-3 w-3 text-seagreen" />}
+                    />
 
-                    {/* Match State */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-seagreen uppercase tracking-widest shrink-0">Situação</span>
-                      <select
-                        value={selectedStatus}
-                        onChange={e => setSelectedStatus(e.target.value as any)}
-                        className="w-full bg-[#092215] border-none text-xs rounded px-3 py-2 text-white focus:ring-1 focus:ring-seagreen outline-none cursor-pointer uppercase tracking-wider font-semibold"
-                      >
-                        <option value="Tudo" className="uppercase bg-[#081f13]">Qualquer Situação</option>
-                        <option value="ao_vivo" className="uppercase bg-[#081f13]">Ao vivo agora</option>
-                        <option value="agendado" className="uppercase bg-[#081f13]">Agendados</option>
-                        <option value="finalizado" className="uppercase bg-[#081f13]">Finalizados</option>
-                      </select>
-                    </div>
+                    {/* Multi-Select Match State */}
+                    <MultiSelectFilter
+                      id="filter-status"
+                      label="Situação da Partida"
+                      options={statusOptions}
+                      selectedValues={selectedStatuses}
+                      onChange={setSelectedStatuses}
+                      allLabel="Todas as Situações"
+                    />
 
                   </div>
 
                   {/* Actions */}
-                  <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto">
+                  <div className="flex flex-wrap items-center gap-2 self-end lg:self-auto pt-4 lg:pt-0">
                     <button 
                       type="button"
                       onClick={() => setIncludeFinished(!includeFinished)}
@@ -941,9 +979,9 @@ export default function App() {
                     <button 
                       onClick={() => {
                         setSearchTerm('');
-                        setSelectedDivision('Tudo');
-                        setSelectedBroadcaster('Tudo');
-                        setSelectedStatus('Tudo');
+                        setSelectedDivisions([]);
+                        setSelectedBroadcasters([]);
+                        setSelectedStatuses([]);
                         setSelectedDay('Tudo');
                         setIncludeFinished(false);
                       }}
@@ -1039,7 +1077,7 @@ export default function App() {
         ) : (
           <>
             {/* CONMEBOL Libertadores Official Tournament Banner when Libertadores is selected */}
-            {activeSport === 'futebol' && (selectedDivision === 'Libertadores' || selectedDivision.toLowerCase().includes('libertadores')) && (
+            {activeSport === 'futebol' && selectedDivisions.some(d => d.toLowerCase().includes('libertadores')) && (
               <div className="bg-gradient-to-r from-amber-950/60 via-[#101c13] to-amber-950/60 border border-amber-500/40 rounded-xl p-4 md:p-5 shadow-lg relative overflow-hidden">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-3.5">
@@ -1124,9 +1162,9 @@ export default function App() {
             <button
               onClick={() => {
                 setSearchTerm('');
-                setSelectedDivision('Tudo');
-                setSelectedBroadcaster('Tudo');
-                setSelectedStatus('Tudo');
+                setSelectedDivisions([]);
+                setSelectedBroadcasters([]);
+                setSelectedStatuses([]);
                 setSelectedDay('Tudo');
                 setIncludeFinished(false);
               }}
