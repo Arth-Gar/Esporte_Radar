@@ -106,7 +106,7 @@ export function Preloader({ isLoading, onFinished }: PreloaderProps) {
 
                     {/* VARREDURA DE RADAR ESTILO CODEPEN (RADAR SWEEP BEAM ROTATING FROM VERTEX AT CENTER) */}
                     <motion.div
-                      animate={{ rotate: 360 }}
+                      animate={{ rotate: -360 }}
                       transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
                       style={{ transformOrigin: 'center center' }}
                       className="absolute inset-0 rounded-full pointer-events-none z-20"
