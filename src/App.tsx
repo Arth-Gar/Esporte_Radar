@@ -28,8 +28,7 @@ import {
   VolumeX,
   Sun,
   Moon,
-  Square,
-  Accessibility
+  Square
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FootballMatch, SportType, UserPreferences } from './types';
@@ -39,6 +38,8 @@ import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { Preloader } from './components/Preloader';
 import { TeamPreferencesModal } from './components/TeamPreferencesModal';
 import { AccessibilityModal } from './components/AccessibilityModal';
+import { UniversalAccessibilityIcon } from './components/UniversalAccessibilityIcon';
+import { TeamLogo } from './components/TeamLogo';
 import { NotificationToastContainer } from './components/NotificationToastContainer';
 import { MultiSelectFilter, MultiSelectOption } from './components/MultiSelectFilter';
 import { 
@@ -71,73 +72,6 @@ const SPORTS_LIST: { id: SportType; label: string; icon: string }[] = [
   { id: 'tenis', label: 'Tênis', icon: '🎾' },
   { id: 'filantropia', label: 'Projetos Sociais & Igrejas', icon: '🤝' },
 ];
-
-// TeamLogo component displaying verified crests from CBF/UOL/Wikimedia with fallback
-function TeamLogo({
-  teamName,
-  logoUrl,
-  size = 'md',
-  className = ''
-}: {
-  teamName: string;
-  logoUrl?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  className?: string;
-}) {
-  const [hasError, setHasError] = useState(false);
-  const [useFallback, setUseFallback] = useState(false);
-
-  useEffect(() => {
-    setHasError(false);
-    setUseFallback(false);
-  }, [logoUrl, teamName]);
-
-  const currentSrc = !useFallback ? logoUrl : undefined;
-
-  const sizeClasses = {
-    sm: 'w-6 h-6 p-0.5',
-    md: 'w-7 h-7 p-0.5',
-    lg: 'w-10 h-10 p-1',
-    xl: 'w-14 h-14 p-1'
-  }[size];
-
-  const imgSizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-7 h-7',
-    xl: 'w-10 h-10'
-  }[size];
-
-  const acronym = (teamName || 'TM')
-    .replace(/[^a-zA-Z0-9]/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .map(w => w[0])
-    .join('')
-    .substring(0, 3)
-    .toUpperCase() || 'TM';
-
-  return (
-    <div className={`relative shrink-0 rounded-full bg-white/95 border border-green-950/30 flex items-center justify-center overflow-hidden shadow-sm ${sizeClasses} ${className}`}>
-      {!hasError && currentSrc ? (
-        <img
-          key={currentSrc}
-          src={currentSrc}
-          alt={teamName}
-          referrerPolicy="no-referrer"
-          className={`${imgSizeClasses} object-contain`}
-          onError={() => {
-            setHasError(true);
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-green-950 border border-green-800 rounded-full flex items-center justify-center text-[9px] font-bold text-white uppercase tracking-tighter">
-          {acronym}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function App() {
   // Initialize Bottom Anchor Ad (Google Ad Manager)
@@ -812,7 +746,7 @@ export default function App() {
                     : 'bg-emerald-950/60 hover:bg-emerald-900/60 border-emerald-600/50 text-seagreen'
                 }`}
               >
-                <Accessibility className="h-4 w-4" />
+                <UniversalAccessibilityIcon className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -891,7 +825,7 @@ export default function App() {
                   : 'bg-blue-950/40 hover:bg-blue-900/60 border-blue-500/50 text-blue-300 hover:text-white'
               }`}
             >
-              <Accessibility className="h-4 w-4 text-blue-400" />
+              <UniversalAccessibilityIcon className="h-4 w-4 text-blue-400" />
               <span>Acessibilidade</span>
             </button>
 

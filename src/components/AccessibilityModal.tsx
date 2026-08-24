@@ -16,6 +16,7 @@ import {
   Check, 
   Sliders
 } from 'lucide-react';
+import { UniversalAccessibilityIcon } from './UniversalAccessibilityIcon';
 import { 
   AccessibilitySettings, 
   speakTodayScheduleSummary, 
@@ -125,14 +126,14 @@ export const AccessibilityModal: React.FC<AccessibilityModalProps> = ({
         >
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-xl ${isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-green-950/80 text-seagreen border border-green-700/50'}`}>
-              <Volume2 className="h-6 w-6" aria-hidden="true" />
+              <UniversalAccessibilityIcon className="h-6 w-6" aria-hidden="true" />
             </div>
             <div>
-              <h2 id="a11y-modal-title" className="text-lg font-bold tracking-tight">
-                Acessibilidade & Leitor de Voz
+              <h2 id="a11y-modal-title" className="text-lg font-bold tracking-tight flex items-center gap-2">
+                <span>Acessibilidade & Leitor de Voz</span>
               </h2>
               <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-emerald-400/80'}`}>
-                Recursos para deficientes visuais, leitor de tela e temas
+                Padrão Universal da ONU • Leitor de tela, voz e alto contraste
               </p>
             </div>
           </div>

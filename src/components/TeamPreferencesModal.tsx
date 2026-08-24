@@ -22,6 +22,7 @@ import {
   Volume2
 } from 'lucide-react';
 import { FootballMatch, UserPreferences } from '../types';
+import { TeamLogo } from './TeamLogo';
 import { 
   getNotificationPermission, 
   requestNotificationPermission, 
@@ -496,20 +497,7 @@ export function TeamPreferencesModal({
                         >
                           <div className="p-3 flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
-                              {team.logo ? (
-                                <img
-                                  src={team.logo}
-                                  alt={team.name}
-                                  className="w-8 h-8 object-contain shrink-0"
-                                  onError={e => {
-                                    (e.target as HTMLElement).style.display = 'none';
-                                  }}
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-green-950 border border-green-800 flex items-center justify-center text-[10px] font-bold text-white">
-                                  {team.name.substring(0, 2).toUpperCase()}
-                                </div>
-                              )}
+                              <TeamLogo teamName={team.name} logoUrl={team.logo} size="md" />
 
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
