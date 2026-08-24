@@ -1222,15 +1222,6 @@ export default function App() {
           /* TABLE GRID HEADER FOR LAPTOPS */
           <div className="space-y-3">
             
-            {/* Table layout header */}
-            <div className="hidden lg:grid grid-cols-12 px-6 py-2 text-[10px] font-bold text-green-500 uppercase tracking-widest border-b border-green-900/40">
-              <div className="col-span-2">DATA / HORA</div>
-              <div className="col-span-1">DIVISÃO</div>
-              <div className="col-span-5 text-center">PARTIDA</div>
-              <div className="col-span-2">TRANSMISSÃO</div>
-              <div className="col-span-2 text-right">AÇÃO</div>
-            </div>
-
             {/* List entries */}
             <div className="grid grid-cols-1 gap-3">
               <AnimatePresence mode="popLayout">
@@ -1255,7 +1246,7 @@ export default function App() {
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ duration: 0.2 }}
                       onClick={() => setSelectedMatch(match)}
-                      className={`group flex flex-col rounded-lg p-3 lg:p-2.5 transition-all duration-200 cursor-pointer relative shadow-[0_2px_8px_rgba(0,0,0,0.15)] hover:shadow-md gap-2 ${
+                      className={`group flex flex-col rounded-lg p-3 lg:p-3 transition-all duration-200 cursor-pointer relative shadow-[0_2px_8px_rgba(0,0,0,0.15)] hover:shadow-md gap-2.5 ${
                         hasFavorite
                           ? 'bg-amber-950/15 border-2 border-amber-500/60 hover:border-amber-400 hover:bg-amber-950/25 shadow-amber-950/30'
                           : 'bg-[oklch(85.2%_0.199_91.936)]/[0.04] border border-[oklch(85.2%_0.199_91.936)]/35 hover:bg-[color-mix(in_oklab,oklch(0.77_0.16_199.2)_55%,transparent)] hover:border-[oklch(0.77_0.16_199.2)]/80'
@@ -1266,18 +1257,21 @@ export default function App() {
                         <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-red-500 rounded-l"></div>
                       )}
 
-                      {/* Top Meta Header: 20% Date/Time | 20% Day of Week | 20% Division | 40% Broadcasters */}
-                      <div className="flex items-center w-full gap-1 border-b border-green-900/20 pb-1.5 text-left">
-                        {/* 20% Data e Hora */}
-                        <div className="w-[20%] shrink-0 min-w-0 pr-1">
-                          <span className="text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-tight truncate block" title={`${dateInfo.shortDate} às ${match.time}`}>
-                            {dateInfo.shortDate} {match.time}
+                      {/* Top Meta Header: 2 Colunas (Coluna 1: Data e Hora | Coluna 2: Dia da Semana e Divisão) */}
+                      <div className="flex items-center justify-between w-full border-b border-green-900/20 pb-1.5 text-left gap-2">
+                        {/* Coluna 1: Data e Hora */}
+                        <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+                          <span className="text-[10px] sm:text-xs font-bold text-white uppercase tracking-tight flex items-center gap-1.5" title={`${dateInfo.shortDate} às ${match.time}`}>
+                            <Calendar className="h-3 w-3 text-seagreen shrink-0 hidden xs:inline" />
+                            <span>{dateInfo.shortDate}</span>
+                            <span className="text-seagreen font-mono font-bold opacity-80">•</span>
+                            <span className="font-mono text-emerald-300 font-bold">{match.time}</span>
                           </span>
                         </div>
 
-                        {/* 20% Dia da Semana */}
-                        <div className="w-[20%] shrink-0 min-w-0 pr-1">
-                          <span className="text-[9px] sm:text-[10px] text-emerald-300 font-mono uppercase tracking-wider truncate block" title={isLive ? 'Ao Vivo' : dateInfo.dayOfWeek}>
+                        {/* Coluna 2: Dia da Semana e Divisão */}
+                        <div className="flex items-center gap-2 justify-end shrink-0 min-w-0">
+                          <span className="text-[9px] sm:text-[10px] text-emerald-300/90 font-mono uppercase tracking-wider shrink-0" title={isLive ? 'Ao Vivo' : dateInfo.dayOfWeek}>
                             {isLive ? (
                               <span className="text-red-400 font-bold animate-pulse flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
@@ -1287,48 +1281,23 @@ export default function App() {
                               dateInfo.dayOfWeek
                             )}
                           </span>
-                        </div>
 
-                        {/* 20% Divisão & Favorito */}
-                        <div className="w-[20%] shrink-0 min-w-0 pr-1 flex items-center gap-1">
-                          <span 
-                            className={`px-1.5 py-0.5 text-[8px] font-bold rounded uppercase tracking-wider truncate block ${getDivisionStyle(match.division)}`}
-                            title={match.division}
-                          >
-                            {match.division}
-                          </span>
-                          {hasFavorite && (
+                          <div className="flex items-center gap-1 shrink-0">
                             <span 
-                              className="px-1 py-0.5 text-[7px] font-black rounded uppercase tracking-wider bg-amber-500 text-black shadow-sm shrink-0 flex items-center gap-0.5" 
-                              title="Meu Time Favorito"
+                              className={`px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold rounded uppercase tracking-wider truncate block max-w-[130px] sm:max-w-[200px] ${getDivisionStyle(match.division)}`}
+                              title={match.division}
                             >
-                              <Star className="h-2 w-2 fill-black text-black" />
+                              {match.division}
                             </span>
-                          )}
-                        </div>
-
-                        {/* 40% Canais de Transmissão (empilhados / resumidos com +) */}
-                        <div className="w-[40%] shrink-0 min-w-0 flex items-center justify-end gap-1 flex-wrap">
-                          {match.broadcasters.slice(0, 2).map((b, i) => {
-                            const style = getBroadcasterStyle(b);
-                            return (
-                              <div 
-                                key={i} 
-                                className={`px-1.5 py-0.5 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-300 border border-green-800/30 truncate max-w-[85px] sm:max-w-[120px] ${style.bg}`}
-                                title={b}
+                            {hasFavorite && (
+                              <span 
+                                className="px-1 py-0.5 text-[7px] font-black rounded uppercase tracking-wider bg-amber-500 text-black shadow-sm shrink-0 flex items-center gap-0.5" 
+                                title="Meu Time Favorito"
                               >
-                                {b}
-                              </div>
-                            );
-                          })}
-                          {match.broadcasters.length > 2 && (
-                            <div 
-                              className="px-1.5 py-0.5 bg-green-950/90 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-400 border border-green-800/40 shrink-0"
-                              title={`Mais canais: ${match.broadcasters.slice(2).join(', ')} (clique no card para ver detalhes)`}
-                            >
-                              +{match.broadcasters.length - 2}
-                            </div>
-                          )}
+                                <Star className="h-2 w-2 fill-black text-black" />
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -1441,8 +1410,34 @@ export default function App() {
                         </div>
                       </div>
 
+                      {/* Linha com todos os canais onde será transmitido */}
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-green-900/20">
+                        <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-green-500/80 flex items-center gap-1 shrink-0">
+                          <Tv className="h-2.5 w-2.5 text-seagreen" />
+                          <span>Onde Assistir:</span>
+                        </span>
+                        <div className="flex items-center gap-1 flex-wrap flex-1 min-w-0">
+                          {match.broadcasters && match.broadcasters.length > 0 ? (
+                            match.broadcasters.map((b, i) => {
+                              const style = getBroadcasterStyle(b);
+                              return (
+                                <span 
+                                  key={i} 
+                                  className={`px-1.5 py-0.5 bg-white/10 rounded flex items-center justify-center text-[8px] font-bold uppercase tracking-wider text-green-300 border border-green-800/30 shrink-0 ${style.bg}`}
+                                  title={b}
+                                >
+                                  {b}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-[8px] text-slate-500 italic">A definir</span>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Small Bottom Indicator Arrow for Mobile Expand UX */}
-                      <div className="flex items-center justify-center -mb-1 -mt-0.5 pt-0.5 border-t border-green-900/20 text-green-500/50 group-hover:text-seagreen transition-colors">
+                      <div className="flex items-center justify-center -mb-1 -mt-1 pt-0.5 text-green-500/40 group-hover:text-seagreen transition-colors">
                         <ChevronDown className="h-3 w-3 transition-transform duration-200 group-hover:translate-y-0.5" />
                       </div>
 
