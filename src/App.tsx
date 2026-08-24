@@ -467,33 +467,32 @@ export default function App() {
     return matchesSearch && matchesDivision && matchesBroadcaster && matchesStatus && matchesDay && matchesFavoritesOnly;
   });
 
-  // Ordenar: 1º Jogos de Times Favoritos (Fixados no Topo), 2º Jogos da Série A, 3º Status (Ao Vivo > Agendado > Finalizado), 4º Data e Horário
+  // Ordenar: 1º Jogos Ao Vivo, 2º Data Cronológica, 3º Horário, 4º Prioridade de Divisão
   const sortedMatches = [...filteredMatches].sort((a, b) => {
-    // Prioridade máxima: jogos dos times favoritos do usuário
-    const aFav = isFavoriteMatch(a);
-    const bFav = isFavoriteMatch(b);
-    if (aFav !== bFav) {
-      return aFav ? -1 : 1;
-    }
-
-    const isSerieA = (div: string) => {
-      const d = (div || '').toLowerCase();
-      return d.includes('série a') || d.includes('serie a');
-    };
-
-    const isASerieA = isSerieA(a.division);
-    const isBSerieA = isSerieA(b.division);
-
-    // Prioridade seguinte: jogos da Série A
-    if (isASerieA !== isBSerieA) {
-      return isASerieA ? -1 : 1;
-    }
-
+    // 1º: Ao Vivo no topo
     const statusPriority = { ao_vivo: 1, agendado: 2, finalizado: 3 };
     const prioA = statusPriority[a.status] || 2;
     const prioB = statusPriority[b.status] || 2;
     if (prioA !== prioB) return prioA - prioB;
-    return a.date.localeCompare(b.date) || a.time.localeCompare(b.time);
+
+    // 2º: Data cronológica ascendente
+    if (a.date !== b.date) {
+      return a.date.localeCompare(b.date);
+    }
+
+    // 3º: Horário ascendente
+    if (a.time !== b.time) {
+      return a.time.localeCompare(b.time);
+    }
+
+    // 4º: Prioridade de Divisão
+    const idxA = preferredDivisionOrder.indexOf(a.division);
+    const idxB = preferredDivisionOrder.indexOf(b.division);
+    if (idxA !== -1 && idxB !== -1 && idxA !== idxB) {
+      return idxA - idxB;
+    }
+
+    return a.homeTeam.localeCompare(b.homeTeam);
   });
 
   // Calculate stats for active sport
@@ -589,6 +588,15 @@ export default function App() {
     if (name.includes('sul-americana') || name.includes('sudamericana') || name.includes('sul americana')) {
       return 'bg-blue-950/80 text-blue-300 border border-blue-500/50';
     }
+    if (name.includes('sub-17') || name.includes('sub17') || name.includes('sub-15') || name.includes('sub15') || name.includes('sub-20') || name.includes('sub20') || name.includes('sub-23') || name.includes('sub23')) {
+      return 'bg-cyan-950/80 text-cyan-300 border border-cyan-700/40';
+    }
+    if (name.includes('feminino') || name.includes('fem')) {
+      return 'bg-rose-950/80 text-rose-300 border border-rose-700/40';
+    }
+    if (name.includes('copa do brasil')) {
+      return 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40';
+    }
     if (name.includes('série a') || name.includes('serie a')) {
       return 'bg-green-950/80 text-green-300 border border-green-700/40';
     }
@@ -600,15 +608,6 @@ export default function App() {
     }
     if (name.includes('série d') || name.includes('serie d')) {
       return 'bg-purple-950/80 text-purple-300 border border-purple-700/40';
-    }
-    if (name.includes('sub-17') || name.includes('sub17') || name.includes('sub-15') || name.includes('sub15') || name.includes('sub-20') || name.includes('sub20')) {
-      return 'bg-cyan-950/80 text-cyan-300 border border-cyan-700/40';
-    }
-    if (name.includes('feminino')) {
-      return 'bg-rose-950/80 text-rose-300 border border-rose-700/40';
-    }
-    if (name.includes('copa do brasil')) {
-      return 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40';
     }
     return 'bg-zinc-900/80 text-zinc-300 border border-zinc-700/40';
   };

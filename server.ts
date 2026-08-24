@@ -491,6 +491,74 @@ function getClubDetails(rawName: string): { name: string; slug: string; logo: st
   };
 }
 
+// Helper to accurately classify division and round from competition details
+function parseMatchDivision(compNameRaw: string, catNameRaw: string, homeTeam: string = '', awayTeam: string = ''): { division: string; round: string } {
+  const comp = (compNameRaw || '').trim();
+  const cat = (catNameRaw || '').trim();
+  const fullText = `${comp} ${cat} ${homeTeam} ${awayTeam}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  let division = 'Série A';
+  let roundText = cat ? `${comp} - ${cat}` : comp;
+
+  // 1. Sub-20 (Must match before generic Brasileiro / Série A)
+  if (fullText.includes('sub-20') || fullText.includes('sub 20') || fullText.includes('sub20') || fullText.includes('juniores')) {
+    division = 'Sub-20';
+  }
+  // 2. Sub-17 (Must match before generic Brasileiro / Série A)
+  else if (fullText.includes('sub-17') || fullText.includes('sub 17') || fullText.includes('sub17') || fullText.includes('juvenil')) {
+    division = 'Sub-17';
+  }
+  // 3. Sub-15 (Must match before generic Brasileiro / Série A)
+  else if (fullText.includes('sub-15') || fullText.includes('sub 15') || fullText.includes('sub15') || fullText.includes('infantil')) {
+    division = 'Sub-15';
+  }
+  // 4. Feminino (Matches Brasileiro Feminino, Feminino A1, A2, A3, Copa do Brasil Feminina, etc.)
+  else if (
+    fullText.includes('feminino') ||
+    fullText.includes('fem') ||
+    cat.toLowerCase() === 'a1' ||
+    cat.toLowerCase() === 'a2' ||
+    cat.toLowerCase() === 'a3' ||
+    comp.toLowerCase().includes('feminino')
+  ) {
+    division = 'Feminino';
+  }
+  // 5. Copa do Brasil (Profissional)
+  else if (fullText.includes('copa do brasil')) {
+    division = 'Copa do Brasil';
+  }
+  // 6. Série B
+  else if (fullText.includes('serie b') || fullText.includes('série b') || fullText.includes('serie-b')) {
+    division = 'Série B';
+  }
+  // 7. Série C
+  else if (fullText.includes('serie c') || fullText.includes('série c') || fullText.includes('serie-c')) {
+    division = 'Série C';
+  }
+  // 8. Série D
+  else if (fullText.includes('serie d') || fullText.includes('série d') || fullText.includes('serie-d')) {
+    division = 'Série D';
+  }
+  // 9. Libertadores
+  else if (fullText.includes('libertadores')) {
+    division = 'Libertadores';
+  }
+  // 10. Sudamericana / Sul-Americana
+  else if (fullText.includes('sudamericana') || fullText.includes('sul-americana') || fullText.includes('sul americana')) {
+    division = 'Sul-Americana';
+  }
+  // 11. Série A (Campeonato Brasileiro Série A / Profissional)
+  else if (fullText.includes('serie a') || fullText.includes('série a') || (comp.toLowerCase().includes('campeonato brasileiro') && (cat.toLowerCase().includes('profissional') || !cat))) {
+    division = 'Série A';
+  }
+  // 12. Fallback
+  else {
+    division = cat || comp || 'Outros';
+  }
+
+  return { division, round: roundText || division };
+}
+
 // Map broadcasters to direct browser streaming URLs
 function getTransmissionDetails(broadcasters: string[]): { label: string; url: string }[] {
   return broadcasters.map(b => {
@@ -1900,37 +1968,9 @@ async function scrapeCBFGames(forceRefresh = false): Promise<any[]> {
             formattedDate = `${year}-${monthStr}-${String(now.getDate()).padStart(2, '0')}`;
           }
 
-          const compName = game.competicao?.campeonato_nome || 'Futebol Brasileiro';
-          const catName = game.competicao?.categoria_nome || '';
-          const combinedComp = `${compName} ${catName}`.toLowerCase();
-
-          let division = 'Série A';
-          if (combinedComp.includes('série b') || combinedComp.includes('serie b') || combinedComp.includes('série-b') || combinedComp.includes('serie-b')) {
-            division = 'Série B';
-          } else if (combinedComp.includes('série c') || combinedComp.includes('serie c') || combinedComp.includes('série-c') || combinedComp.includes('serie-c')) {
-            division = 'Série C';
-          } else if (combinedComp.includes('série d') || combinedComp.includes('serie d') || combinedComp.includes('série-d') || combinedComp.includes('serie-d')) {
-            division = 'Série D';
-          } else if (combinedComp.includes('sub-17') || combinedComp.includes('sub17')) {
-            division = 'Sub-17';
-          } else if (combinedComp.includes('sub-20') || combinedComp.includes('sub20')) {
-            division = 'Sub-20';
-          } else if (combinedComp.includes('sub-15') || combinedComp.includes('sub15')) {
-            division = 'Sub-15';
-          } else if (combinedComp.includes('feminino') || combinedComp.includes('a1') || combinedComp.includes('a2')) {
-            division = 'Feminino';
-          } else if (combinedComp.includes('copa do brasil')) {
-            division = 'Copa do Brasil';
-          } else {
-            // Keep default Série A only if it matches Brasileiro Serie A explicitly or is a generic championship
-            if (combinedComp.includes('série a') || combinedComp.includes('serie a')) {
-              division = 'Série A';
-            } else {
-              division = catName || compName || 'Outros';
-            }
-          }
-
-          const roundText = catName ? `${compName} - ${catName}` : compName;
+          const compName = game.competicao?.campeonato_nome || game.campeonato?.nome || 'Futebol Brasileiro';
+          const catName = game.competicao?.categoria_nome || game.categoria || '';
+          const { division, round: roundText } = parseMatchDivision(compName, catName, homeName, awayName);
 
           const transmissions = game.transmissoes || [];
           const broadcasters = transmissions.map((t: any) => t.nome).filter(Boolean);

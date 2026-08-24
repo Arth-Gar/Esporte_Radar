@@ -32,16 +32,8 @@ export function emitInAppToast(toast: Omit<InAppToast, 'id' | 'timestamp'>) {
 }
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
-  favoriteTeams: ['Flamengo'],
-  notificationConfigs: {
-    'Flamengo': {
-      teamName: 'Flamengo',
-      enabled: true,
-      divisions: [], // empty = all divisions
-      notifyBeforeMinutes: 15,
-      soundEnabled: true,
-    }
-  },
+  favoriteTeams: [],
+  notificationConfigs: {},
   notificationsGlobalEnabled: true,
   notifyBeforeMinutes: 15,
   onlyFavoritesInFeed: false,

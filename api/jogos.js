@@ -1093,6 +1093,74 @@ function getOtherSportsEvents() {
   ];
 }
 
+// Helper to accurately classify division and round from competition details
+function parseMatchDivision(compNameRaw, catNameRaw, homeTeam = '', awayTeam = '') {
+  const comp = (compNameRaw || '').trim();
+  const cat = (catNameRaw || '').trim();
+  const fullText = `${comp} ${cat} ${homeTeam} ${awayTeam}`.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  let division = 'Série A';
+  let roundText = cat ? `${comp} - ${cat}` : comp;
+
+  // 1. Sub-20 (Must match before generic Brasileiro / Série A)
+  if (fullText.includes('sub-20') || fullText.includes('sub 20') || fullText.includes('sub20') || fullText.includes('juniores')) {
+    division = 'Sub-20';
+  }
+  // 2. Sub-17 (Must match before generic Brasileiro / Série A)
+  else if (fullText.includes('sub-17') || fullText.includes('sub 17') || fullText.includes('sub17') || fullText.includes('juvenil')) {
+    division = 'Sub-17';
+  }
+  // 3. Sub-15 (Must match before generic Brasileiro / Série A)
+  else if (fullText.includes('sub-15') || fullText.includes('sub 15') || fullText.includes('sub15') || fullText.includes('infantil')) {
+    division = 'Sub-15';
+  }
+  // 4. Feminino (Matches Brasileiro Feminino, Feminino A1, A2, A3, Copa do Brasil Feminina, etc.)
+  else if (
+    fullText.includes('feminino') ||
+    fullText.includes('fem') ||
+    cat.toLowerCase() === 'a1' ||
+    cat.toLowerCase() === 'a2' ||
+    cat.toLowerCase() === 'a3' ||
+    comp.toLowerCase().includes('feminino')
+  ) {
+    division = 'Feminino';
+  }
+  // 5. Copa do Brasil (Profissional)
+  else if (fullText.includes('copa do brasil')) {
+    division = 'Copa do Brasil';
+  }
+  // 6. Série B
+  else if (fullText.includes('serie b') || fullText.includes('série b') || fullText.includes('serie-b')) {
+    division = 'Série B';
+  }
+  // 7. Série C
+  else if (fullText.includes('serie c') || fullText.includes('série c') || fullText.includes('serie-c')) {
+    division = 'Série C';
+  }
+  // 8. Série D
+  else if (fullText.includes('serie d') || fullText.includes('série d') || fullText.includes('serie-d')) {
+    division = 'Série D';
+  }
+  // 9. Libertadores
+  else if (fullText.includes('libertadores')) {
+    division = 'Libertadores';
+  }
+  // 10. Sudamericana / Sul-Americana
+  else if (fullText.includes('sudamericana') || fullText.includes('sul-americana') || fullText.includes('sul americana')) {
+    division = 'Sul-Americana';
+  }
+  // 11. Série A (Campeonato Brasileiro Série A / Profissional)
+  else if (fullText.includes('serie a') || fullText.includes('série a') || (comp.toLowerCase().includes('campeonato brasileiro') && (cat.toLowerCase().includes('profissional') || !cat))) {
+    division = 'Série A';
+  }
+  // 12. Fallback
+  else {
+    division = cat || comp || 'Outros';
+  }
+
+  return { division, round: roundText || division };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1157,21 +1225,8 @@ export default async function handler(req, res) {
             const matchTime = timeVal.length >= 5 ? timeVal.substring(0, 5) : timeVal;
 
             const compName = game.competicao?.campeonato_nome || game.campeonato?.nome || game.competicao || 'Futebol Brasileiro';
-            const catName = game.competicao?.categoria_nome || '';
-            const combinedComp = `${compName} ${catName}`.toLowerCase();
-
-            let division = 'Série A';
-            if (combinedComp.includes('série b') || combinedComp.includes('serie b')) {
-              division = 'Série B';
-            } else if (combinedComp.includes('série c') || combinedComp.includes('serie c')) {
-              division = 'Série C';
-            } else if (combinedComp.includes('série d') || combinedComp.includes('serie d')) {
-              division = 'Série D';
-            } else if (combinedComp.includes('copa do brasil')) {
-              division = 'Copa do Brasil';
-            } else if (combinedComp.includes('feminino')) {
-              division = 'Feminino';
-            }
+            const catName = game.competicao?.categoria_nome || game.categoria || '';
+            const { division, round: roundText } = parseMatchDivision(compName, catName, homeName, awayName);
 
             const transmissions = game.transmissoes || [];
             const broadcasters = [];
@@ -1220,6 +1275,7 @@ export default async function handler(req, res) {
               date: formattedDate,
               time: matchTime,
               division: division,
+              round: roundText,
               stadium: game.local || 'A definir',
               broadcasters: broadcasters,
               score: matchScore,
