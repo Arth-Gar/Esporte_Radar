@@ -51,6 +51,13 @@ import {
   emitInAppToast
 } from './utils/notificationService';
 import { 
+  isTeamInFavorites, 
+  isMatchFavorite, 
+  toggleFavoriteTeamInList, 
+  isSameTeam, 
+  sanitizeFavoritesList 
+} from './utils/teamUtils';
+import { 
   AccessibilitySettings, 
   getStoredA11ySettings, 
   saveA11ySettings, 
@@ -212,19 +219,20 @@ export default function App() {
     initServiceWorker();
   }, []);
 
-  // Quick toggle favorite for a specific team (directly from match card)
+  // Quick toggle favorite for a specific team (directly from match card or modal)
   const handleToggleFavoriteTeam = async (teamName: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const isFav = preferences.favoriteTeams.includes(teamName);
+    
+    const { newFavorites, wasRemoved, cleanName } = toggleFavoriteTeamInList(teamName, preferences.favoriteTeams);
 
     // If favoriting a team, prompt browser for notification permission if default
-    if (!isFav && typeof window !== 'undefined' && 'Notification' in window) {
+    if (!wasRemoved && typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         try {
           const perm = await requestNotificationPermission();
           if (perm === 'granted') {
             emitInAppToast({
-              title: `🔔 Alertas Ativados: ${teamName}`,
+              title: `🔔 Alertas Ativados: ${cleanName}`,
               body: `Notificações autorizadas com sucesso! Você receberá avisos antes das partidas no celular e relógio.`,
               type: 'success',
             });
@@ -232,26 +240,44 @@ export default function App() {
         } catch {}
       } else if (Notification.permission === 'granted') {
         emitInAppToast({
-          title: `⭐ Time Favoritado: ${teamName}`,
-          body: `Você receberá avisos no início das partidas do ${teamName}.`,
+          title: `⭐ Time Favoritado: ${cleanName}`,
+          body: `Você receberá avisos no início das partidas do ${cleanName}.`,
           type: 'success',
         });
       }
+    } else if (wasRemoved) {
+      // Direct user confirmation when removing favorite team
+      emitInAppToast({
+        title: `⭐ Time Removido dos Favoritos`,
+        body: `${cleanName} foi removido dos favoritos e seus alertas foram desativados.`,
+        type: 'info',
+      });
     }
 
-    const newFavorites = isFav
-      ? preferences.favoriteTeams.filter(t => t !== teamName)
-      : [...preferences.favoriteTeams, teamName];
-
+    // Clean up or add notification config
     const newConfigs = { ...preferences.notificationConfigs };
-    if (!isFav && !newConfigs[teamName]) {
-      newConfigs[teamName] = {
-        teamName,
-        enabled: true,
-        divisions: [],
-        notifyBeforeMinutes: preferences.notifyBeforeMinutes || 15,
-        soundEnabled: true,
-      };
+    if (wasRemoved) {
+      // Remove all notification entries corresponding to this team alias/canonical name
+      Object.keys(newConfigs).forEach(key => {
+        if (isSameTeam(key, cleanName)) {
+          delete newConfigs[key];
+        }
+      });
+      // If no favorite teams left and onlyFavoritesFilter is active, deactivate the filter
+      if (newFavorites.length === 0 && onlyFavoritesFilter) {
+        setOnlyFavoritesFilter(false);
+      }
+    } else {
+      const existingKey = Object.keys(newConfigs).find(k => isSameTeam(k, cleanName));
+      if (!existingKey) {
+        newConfigs[cleanName] = {
+          teamName: cleanName,
+          enabled: true,
+          divisions: [],
+          notifyBeforeMinutes: preferences.notifyBeforeMinutes || 15,
+          soundEnabled: true,
+        };
+      }
     }
 
     handleUpdatePreferences({
@@ -263,18 +289,12 @@ export default function App() {
 
   // Helper to check if a match contains any favorite team
   const isFavoriteMatch = (match: FootballMatch) => {
-    return preferences.favoriteTeams.some(fav => 
-      match.homeTeam.toLowerCase().includes(fav.toLowerCase()) || 
-      match.awayTeam.toLowerCase().includes(fav.toLowerCase())
-    );
+    return isMatchFavorite(match, preferences.favoriteTeams);
   };
 
   // Helper to check if a team is favorite
   const isTeamFavorite = (teamName: string) => {
-    return preferences.favoriteTeams.some(fav => 
-      teamName.toLowerCase().includes(fav.toLowerCase()) ||
-      fav.toLowerCase().includes(teamName.toLowerCase())
-    );
+    return isTeamInFavorites(teamName, preferences.favoriteTeams);
   };
 
   // Background check to trigger kickoff reminders on cellphone & smartwatch
@@ -1495,32 +1515,66 @@ export default function App() {
           </div>
         ) : sortedMatches.length === 0 ? (
           <div className="p-12 text-center rounded-lg bg-[#05140d] border border-green-950/60 space-y-4 max-w-lg mx-auto shadow-xl">
-            <Info className="h-10 w-10 text-seagreen mx-auto" />
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Nenhum Evento Encontrado</h3>
-            <p className="text-xs text-green-400/80 leading-relaxed">
-              Não existem transmissões agendadas nesta modalidade para {
-                selectedDay === 'Tudo'
-                  ? 'a data ou filtros selecionados'
-                  : selectedDay === currentDayNumber || selectedDay === `${currentYearNumber}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`
-                  ? 'hoje'
-                  : typeof selectedDay === 'string'
-                  ? `o dia ${selectedDay.split('-').slice(1).reverse().join('/')}`
-                  : `o dia ${String(selectedDay).padStart(2, '0')}/${String(currentMonthIndex + 1).padStart(2, '0')}`
-              }. Selecione outro dia no calendário ou resete os filtros.
-            </p>
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedDivisions([]);
-                setSelectedBroadcasters([]);
-                setSelectedStatuses([]);
-                setSelectedDay('Tudo');
-                setIncludeFinished(false);
-              }}
-              className="px-4 py-2 bg-seagreen text-white text-xs font-bold rounded hover:bg-seagreen-solid hover:text-black transition-all cursor-pointer uppercase tracking-wider"
-            >
-              Resetar Filtros
-            </button>
+            {onlyFavoritesFilter ? (
+              <>
+                <Star className="h-10 w-10 text-amber-400 mx-auto fill-amber-400/20" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Nenhuma Partida para Seus Times Favoritos
+                </h3>
+                <p className="text-xs text-green-400/80 leading-relaxed">
+                  {preferences.favoriteTeams.length === 0
+                    ? 'Você não possui nenhum clube favoritado no momento.'
+                    : `Não há transmissões agendadas para seus times favoritos (${preferences.favoriteTeams.join(', ')}) no filtro selecionado.`}
+                </p>
+                <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setOnlyFavoritesFilter(false)}
+                    className="px-4 py-2 bg-seagreen text-white text-xs font-bold rounded hover:bg-seagreen-solid hover:text-black transition-all cursor-pointer uppercase tracking-wider"
+                  >
+                    Ver Todas as Partidas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreferencesModal(true)}
+                    className="px-4 py-2 bg-amber-950/50 text-amber-300 border border-amber-500/40 text-xs font-bold rounded hover:bg-amber-900/60 transition-all cursor-pointer uppercase tracking-wider"
+                  >
+                    Gerenciar Favoritos
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Info className="h-10 w-10 text-seagreen mx-auto" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">Nenhum Evento Encontrado</h3>
+                <p className="text-xs text-green-400/80 leading-relaxed">
+                  Não existem transmissões agendadas nesta modalidade para {
+                    selectedDay === 'Tudo'
+                      ? 'a data ou filtros selecionados'
+                      : selectedDay === currentDayNumber || selectedDay === `${currentYearNumber}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`
+                      ? 'hoje'
+                      : typeof selectedDay === 'string'
+                      ? `o dia ${selectedDay.split('-').slice(1).reverse().join('/')}`
+                      : `o dia ${String(selectedDay).padStart(2, '0')}/${String(currentMonthIndex + 1).padStart(2, '0')}`
+                  }. Selecione outro dia no calendário ou resete os filtros.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedDivisions([]);
+                    setSelectedBroadcasters([]);
+                    setSelectedStatuses([]);
+                    setSelectedDay('Tudo');
+                    setIncludeFinished(false);
+                    setOnlyFavoritesFilter(false);
+                  }}
+                  className="px-4 py-2 bg-seagreen text-white text-xs font-bold rounded hover:bg-seagreen-solid hover:text-black transition-all cursor-pointer uppercase tracking-wider"
+                >
+                  Resetar Filtros
+                </button>
+              </>
+            )}
           </div>
         ) : (
           /* TABLE GRID HEADER FOR LAPTOPS */

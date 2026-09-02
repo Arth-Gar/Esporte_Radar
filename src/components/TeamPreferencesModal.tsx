@@ -30,6 +30,12 @@ import {
   playNotificationChime,
   emitInAppToast
 } from '../utils/notificationService';
+import { 
+  isTeamInFavorites, 
+  isSameTeam, 
+  toggleFavoriteTeamInList, 
+  sanitizeFavoritesList 
+} from '../utils/teamUtils';
 
 interface TeamPreferencesModalProps {
   isOpen: boolean;
@@ -103,8 +109,8 @@ export function TeamPreferencesModal({
 
     // Sort teams by favorites first, then alphabetically
     teamsArray.sort((a, b) => {
-      const aFav = preferences.favoriteTeams.includes(a.name);
-      const bFav = preferences.favoriteTeams.includes(b.name);
+      const aFav = isTeamInFavorites(a.name, preferences.favoriteTeams);
+      const bFav = isTeamInFavorites(b.name, preferences.favoriteTeams);
       if (aFav && !bFav) return -1;
       if (!aFav && bFav) return 1;
       return a.name.localeCompare(b.name);
@@ -125,30 +131,46 @@ export function TeamPreferencesModal({
 
   // Toggle favorite status and request browser permission if needed
   const handleToggleFavorite = async (teamName: string) => {
-    const isFav = preferences.favoriteTeams.includes(teamName);
+    const { newFavorites, wasRemoved, cleanName } = toggleFavoriteTeamInList(teamName, preferences.favoriteTeams);
 
     // If adding a team to favorites, request browser notification permission
-    if (!isFav && typeof window !== 'undefined' && 'Notification' in window) {
+    if (!wasRemoved && typeof window !== 'undefined' && 'Notification' in window) {
       if (Notification.permission === 'default') {
         const perm = await requestNotificationPermission();
         setNotificationStatus(perm);
       }
+      emitInAppToast({
+        title: `⭐ Time Favoritado: ${cleanName}`,
+        body: `Você receberá avisos no início das partidas do ${cleanName}.`,
+        type: 'success',
+      });
+    } else if (wasRemoved) {
+      emitInAppToast({
+        title: `⭐ Time Removido dos Favoritos`,
+        body: `${cleanName} foi removido dos favoritos e seus alertas foram desativados.`,
+        type: 'info',
+      });
     }
 
-    const newFavorites = isFav 
-      ? preferences.favoriteTeams.filter(t => t !== teamName)
-      : [...preferences.favoriteTeams, teamName];
-
-    // If favoriting, automatically initialize notification config if not present
+    // Clean up notification configs if removed, or initialize if added
     const newConfigs = { ...preferences.notificationConfigs };
-    if (!isFav && !newConfigs[teamName]) {
-      newConfigs[teamName] = {
-        teamName,
-        enabled: true,
-        divisions: [], // all divisions
-        notifyBeforeMinutes: preferences.notifyBeforeMinutes || 15,
-        soundEnabled: true,
-      };
+    if (wasRemoved) {
+      Object.keys(newConfigs).forEach(key => {
+        if (isSameTeam(key, cleanName)) {
+          delete newConfigs[key];
+        }
+      });
+    } else {
+      const existingKey = Object.keys(newConfigs).find(k => isSameTeam(k, cleanName));
+      if (!existingKey) {
+        newConfigs[cleanName] = {
+          teamName: cleanName,
+          enabled: true,
+          divisions: [], // all divisions
+          notifyBeforeMinutes: preferences.notifyBeforeMinutes || 15,
+          soundEnabled: true,
+        };
+      }
     }
 
     onUpdatePreferences({
@@ -160,7 +182,8 @@ export function TeamPreferencesModal({
 
   // Toggle notifications for a team
   const handleToggleNotification = async (teamName: string) => {
-    const current = preferences.notificationConfigs[teamName];
+    const configKey = Object.keys(preferences.notificationConfigs).find(k => isSameTeam(k, teamName)) || teamName;
+    const current = preferences.notificationConfigs[configKey];
     const isCurrentlyEnabled = current?.enabled ?? false;
 
     // If turning on notification, request browser permission if default
@@ -173,7 +196,7 @@ export function TeamPreferencesModal({
 
     const newConfigs = {
       ...preferences.notificationConfigs,
-      [teamName]: {
+      [configKey]: {
         teamName,
         enabled: !isCurrentlyEnabled,
         divisions: current?.divisions || [],
@@ -190,7 +213,8 @@ export function TeamPreferencesModal({
 
   // Toggle a specific division for a team
   const handleToggleTeamDivision = (teamName: string, division: string) => {
-    const current = preferences.notificationConfigs[teamName] || {
+    const configKey = Object.keys(preferences.notificationConfigs).find(k => isSameTeam(k, teamName)) || teamName;
+    const current = preferences.notificationConfigs[configKey] || {
       teamName,
       enabled: true,
       divisions: [],
@@ -211,7 +235,7 @@ export function TeamPreferencesModal({
 
     const newConfigs = {
       ...preferences.notificationConfigs,
-      [teamName]: {
+      [configKey]: {
         ...current,
         enabled: true,
         divisions: newDivisions,
@@ -226,7 +250,8 @@ export function TeamPreferencesModal({
 
   // Select all divisions for a team (empty array = all)
   const handleSetAllDivisions = (teamName: string, all: boolean) => {
-    const current = preferences.notificationConfigs[teamName] || {
+    const configKey = Object.keys(preferences.notificationConfigs).find(k => isSameTeam(k, teamName)) || teamName;
+    const current = preferences.notificationConfigs[configKey] || {
       teamName,
       enabled: true,
       divisions: [],
@@ -236,7 +261,7 @@ export function TeamPreferencesModal({
 
     const newConfigs = {
       ...preferences.notificationConfigs,
-      [teamName]: {
+      [configKey]: {
         ...current,
         enabled: true,
         divisions: all ? [] : ['Série A'],
@@ -251,7 +276,8 @@ export function TeamPreferencesModal({
 
   // Update notification timing window for a team
   const handleSetTiming = (teamName: string, minutes: number) => {
-    const current = preferences.notificationConfigs[teamName] || {
+    const configKey = Object.keys(preferences.notificationConfigs).find(k => isSameTeam(k, teamName)) || teamName;
+    const current = preferences.notificationConfigs[configKey] || {
       teamName,
       enabled: true,
       divisions: [],
@@ -261,7 +287,7 @@ export function TeamPreferencesModal({
 
     const newConfigs = {
       ...preferences.notificationConfigs,
-      [teamName]: {
+      [configKey]: {
         ...current,
         notifyBeforeMinutes: minutes,
       }
@@ -480,8 +506,9 @@ export function TeamPreferencesModal({
                     </div>
                   ) : (
                     filteredTeams.map(team => {
-                      const isFav = preferences.favoriteTeams.includes(team.name);
-                      const config = preferences.notificationConfigs[team.name];
+                      const isFav = isTeamInFavorites(team.name, preferences.favoriteTeams);
+                      const configKey = Object.keys(preferences.notificationConfigs).find(k => isSameTeam(k, team.name)) || team.name;
+                      const config = preferences.notificationConfigs[configKey];
                       const isNotifEnabled = config?.enabled ?? isFav;
                       const hasSpecificDivisions = config?.divisions && config.divisions.length > 0;
                       const isExpanded = expandedTeamConfig === team.name;
@@ -672,7 +699,8 @@ export function TeamPreferencesModal({
                     </div>
                   ) : (
                     preferences.favoriteTeams.map(favTeam => {
-                      const config = preferences.notificationConfigs[favTeam];
+                      const configKey = Object.keys(preferences.notificationConfigs).find(k => isSameTeam(k, favTeam)) || favTeam;
+                      const config = preferences.notificationConfigs[configKey];
                       const selectedDivs = config?.divisions || [];
                       const isAll = selectedDivs.length === 0;
 

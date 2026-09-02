@@ -1,4 +1,5 @@
 import { FootballMatch, UserPreferences, TeamNotificationConfig } from '../types';
+import { sanitizeFavoritesList, isSameTeam } from './teamUtils';
 
 const STORAGE_KEY = 'esporte_radar_user_prefs_v1';
 const NOTIFIED_MATCHES_KEY = 'esporte_radar_notified_matches_v1';
@@ -56,8 +57,10 @@ export function getStoredPreferences(): UserPreferences {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PREFERENCES;
     const parsed = JSON.parse(raw);
+    const rawFavorites = Array.isArray(parsed.favoriteTeams) ? parsed.favoriteTeams : DEFAULT_PREFERENCES.favoriteTeams;
+    const sanitizedFavorites = sanitizeFavoritesList(rawFavorites);
     return {
-      favoriteTeams: Array.isArray(parsed.favoriteTeams) ? parsed.favoriteTeams : DEFAULT_PREFERENCES.favoriteTeams,
+      favoriteTeams: sanitizedFavorites,
       notificationConfigs: parsed.notificationConfigs || DEFAULT_PREFERENCES.notificationConfigs,
       notificationsGlobalEnabled: parsed.notificationsGlobalEnabled ?? true,
       notifyBeforeMinutes: parsed.notifyBeforeMinutes ?? 15,
@@ -311,14 +314,15 @@ export function checkAndTriggerMatchAlerts(matches: FootballMatch[], prefs: User
 
     // Check if match contains a favorite team or a configured team
     const matchingTeams = prefs.favoriteTeams.filter(team => 
-      match.homeTeam.toLowerCase().includes(team.toLowerCase()) || 
-      match.awayTeam.toLowerCase().includes(team.toLowerCase())
+      isSameTeam(match.homeTeam, team) || isSameTeam(match.awayTeam, team)
     );
 
     if (matchingTeams.length === 0) return;
 
     matchingTeams.forEach(team => {
-      const config: TeamNotificationConfig = prefs.notificationConfigs[team] || {
+      // Find matching config by key or same team
+      const configKey = Object.keys(prefs.notificationConfigs).find(k => isSameTeam(k, team)) || team;
+      const config: TeamNotificationConfig = prefs.notificationConfigs[configKey] || {
         teamName: team,
         enabled: true,
         divisions: [],
