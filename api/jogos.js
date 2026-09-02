@@ -62,6 +62,7 @@ function getClubLogo(name) {
     'cruzeiro': 'https://conteudo.cbf.com.br/clubes/20008/escudo.jpg',
     'grêmio': 'https://conteudo.cbf.com.br/clubes/20009/escudo.jpg',
     'internacional': 'https://conteudo.cbf.com.br/clubes/20010/escudo.jpg',
+    'mirassol': 'https://conteudo.cbf.com.br/clubes/20385/escudo.jpg',
     'independiente rivadavia': 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801',
     'csir': 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801',
     'rivadavia': 'https://gol-cdn.conmebol.com/icons/team/light/3x/id/158.png?version=2026040801',
@@ -1125,9 +1126,10 @@ function parseMatchDivision(compNameRaw, catNameRaw, homeTeam = '', awayTeam = '
   ) {
     division = 'Feminino';
   }
-  // 5. Copa do Brasil (Profissional)
-  else if (fullText.includes('copa do brasil')) {
-    division = 'Copa do Brasil';
+  // 5. Copa Betano do Brasil (Profissional)
+  else if (fullText.includes('copa do brasil') || fullText.includes('copa betano') || fullText.includes('betano')) {
+    division = 'Copa Betano';
+    roundText = cat ? `Copa Betano do Brasil - ${cat}` : 'Copa Betano do Brasil';
   }
   // 6. Série B
   else if (fullText.includes('serie b') || fullText.includes('série b') || fullText.includes('serie-b')) {
@@ -1179,15 +1181,172 @@ export default async function handler(req, res) {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
+    const currentDay = now.getDate();
     const monthStr = String(month).padStart(2, '0');
     const startDateStr = `${year}-${monthStr}-01`;
     const lastDay = new Date(year, month, 0).getDate();
-    const endDateStr = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+
+    // Se estiver nos últimos 5 dias do mês ou se foi explicitamente solicitado, adianta os jogos do próximo mês
+    const isLast5DaysOfMonth = currentDay >= (lastDay - 4);
+    const advanceNextMonth = req.query?.advanceNextMonth === 'true' || isLast5DaysOfMonth;
+
+    let endDateStr = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+    if (advanceNextMonth) {
+      const nextMonthDate = new Date(year, month, 1);
+      const nextYear = nextMonthDate.getFullYear();
+      const nextMonth = nextMonthDate.getMonth() + 1;
+      const nextMonthLastDay = new Date(nextYear, nextMonth, 0).getDate();
+      const nextMonthStr = String(nextMonth).padStart(2, '0');
+      endDateStr = `${nextYear}-${nextMonthStr}-${String(nextMonthLastDay).padStart(2, '0')}`;
+    }
 
     let scrapedGames = [];
+
+    // Helper para adicionar ou mesclar jogos sem duplicar e enriquecendo informações
+    function addOrUpdateGame(newGame) {
+      if (!newGame) return;
+      const idx = scrapedGames.findIndex(g =>
+        g.date === newGame.date &&
+        ((g.homeTeam?.toLowerCase() === newGame.homeTeam?.toLowerCase() && g.awayTeam?.toLowerCase() === newGame.awayTeam?.toLowerCase()) ||
+         (g.homeTeamSlug && newGame.homeTeamSlug && g.homeTeamSlug === newGame.homeTeamSlug && g.awayTeamSlug === newGame.awayTeamSlug))
+      );
+      if (idx >= 0) {
+        const existing = scrapedGames[idx];
+        const mergedBroadcasters = Array.from(new Set([...(existing.broadcasters || []), ...(newGame.broadcasters || [])])).filter(b => b && b !== 'A definir');
+        scrapedGames[idx] = {
+          ...existing,
+          ...newGame,
+          division: newGame.division || existing.division,
+          round: newGame.round || existing.round,
+          broadcasters: mergedBroadcasters.length > 0 ? mergedBroadcasters : existing.broadcasters
+        };
+      } else {
+        scrapedGames.push(newGame);
+      }
+    }
+
+    // Helper para mapear jogo cru da API da CBF
+    function mapRawCBFGame(game) {
+      try {
+        const homeName = game.mandante?.nome || game.equipe_mandante?.nome_popular || game.equipe_mandante?.nome || 'A definir';
+        const awayName = game.visitante?.nome || game.equipe_visitante?.nome_popular || game.equipe_visitante?.nome || 'A definir';
+
+        if (homeName === 'A definir' && awayName === 'A definir') return null;
+
+        const homeLogo = game.mandante?.url_escudo || game.equipe_mandante?.escudo || getClubLogo(homeName);
+        const awayLogo = game.visitante?.url_escudo || game.equipe_visitante?.escudo || getClubLogo(awayName);
+
+        let formattedDate = game.data_realizacao || game.data || '';
+        if (formattedDate.includes('/')) {
+          const parts = formattedDate.split('/');
+          if (parts.length === 3) {
+            formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+        if (!formattedDate) {
+          formattedDate = `${year}-${monthStr}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        const timeVal = game.hora || game.hora_realizacao || '16:00';
+        const matchTime = timeVal.length >= 5 ? timeVal.substring(0, 5) : timeVal;
+
+        const compName = game.competicao?.campeonato_nome || game.campeonato?.nome || game.competicao || 'Futebol Brasileiro';
+        const catName = game.competicao?.categoria_nome || game.categoria || '';
+        const { division, round: roundText } = parseMatchDivision(compName, catName, homeName, awayName);
+
+        const transmissions = game.transmissoes || [];
+        const broadcasters = [];
+        if (Array.isArray(transmissions)) {
+          transmissions.forEach((t) => {
+            const bName = typeof t === 'string' ? t : (t.nome || t.veiculo || t.transmissao);
+            if (bName && !broadcasters.includes(bName)) {
+              broadcasters.push(bName);
+            }
+          });
+        }
+        if (broadcasters.length === 0) broadcasters.push('CBF TV');
+
+        // Scores & Penalties from CBF API (gols, penaltis)
+        let matchScore = null;
+        if (
+          game.mandante?.gols !== undefined && game.mandante?.gols !== null && game.mandante?.gols !== '' &&
+          game.visitante?.gols !== undefined && game.visitante?.gols !== null && game.visitante?.gols !== ''
+        ) {
+          const hGols = parseInt(game.mandante.gols, 10);
+          const aGols = parseInt(game.visitante.gols, 10);
+          if (!isNaN(hGols) && !isNaN(aGols)) {
+            let penObj = undefined;
+            if (game.mandante?.penaltis && game.visitante?.penaltis && (game.mandante.penaltis !== '0' || game.visitante.penaltis !== '0')) {
+              penObj = {
+                home: parseInt(game.mandante.penaltis, 10),
+                away: parseInt(game.visitante.penaltis, 10)
+              };
+            }
+            matchScore = {
+              home: hGols,
+              away: aGols,
+              penalties: penObj,
+              display: penObj ? `${hGols} (${penObj.home}) - (${penObj.away}) ${aGols}` : `${hGols} - ${aGols}`
+            };
+          }
+        }
+
+        return {
+          id: `api-cbf-${game.id || game.id_jogo || Math.random().toString(36).substring(2, 9)}`,
+          sport: 'futebol',
+          homeTeam: homeName,
+          homeTeamLogo: homeLogo,
+          awayTeam: awayName,
+          awayTeamLogo: awayLogo,
+          date: formattedDate,
+          time: matchTime,
+          division: division,
+          round: roundText,
+          stadium: game.local || 'A definir',
+          broadcasters: broadcasters,
+          score: matchScore,
+          homeScore: matchScore ? matchScore.home : null,
+          awayScore: matchScore ? matchScore.away : null,
+          status: 'agendado',
+          scraped: true
+        };
+      } catch (itemErr) {
+        console.warn('Erro ao processar item individual:', itemErr);
+        return null;
+      }
+    }
+
+    // FASE 1: Varredura dos jogos de hoje da CBF
+    const todayIso = `${year}-${monthStr}-${String(currentDay).padStart(2, '0')}`;
+    try {
+      const todayUrl = `https://www.cbf.com.br/api/cbf/onde-assistir/jogos?page=1&dataInicio=${todayIso}&dataTermino=${todayIso}`;
+      const todayResult = await fetchJsonSecurely(todayUrl);
+      const todayGames = todayResult?.jogos || todayResult?.data || [];
+      for (const g of todayGames) {
+        const parsed = mapRawCBFGame(g);
+        if (parsed) addOrUpdateGame(parsed);
+      }
+    } catch (eToday) {
+      console.warn('Aviso ao varrer jogos de hoje:', eToday);
+    }
+
+    // FASE 2: Varredura dedicada da Copa Betano (campeonato=24)
+    try {
+      const copaUrl = `https://www.cbf.com.br/api/cbf/onde-assistir/jogos?page=1&campeonato=24&dataInicio=${startDateStr}&dataTermino=${endDateStr}`;
+      const copaResult = await fetchJsonSecurely(copaUrl);
+      const copaGames = copaResult?.jogos || copaResult?.data || [];
+      for (const g of copaGames) {
+        const parsed = mapRawCBFGame(g);
+        if (parsed) addOrUpdateGame(parsed);
+      }
+    } catch (eCopa) {
+      console.warn('Aviso ao varrer Copa Betano:', eCopa);
+    }
+
+    // FASE 3: Varredura geral do calendário
     let page = 1;
     let lastPage = 1;
-    const maxPages = 15;
+    const maxPages = advanceNextMonth ? 40 : 25;
 
     while (page <= lastPage && page <= maxPages) {
       try {
@@ -1201,98 +1360,136 @@ export default async function handler(req, res) {
         if (games.length === 0) break;
 
         for (const game of games) {
-          try {
-            const homeName = game.mandante?.nome || game.equipe_mandante?.nome_popular || game.equipe_mandante?.nome || 'A definir';
-            const awayName = game.visitante?.nome || game.equipe_visitante?.nome_popular || game.equipe_visitante?.nome || 'A definir';
-
-            if (homeName === 'A definir' && awayName === 'A definir') continue;
-
-            const homeLogo = game.mandante?.url_escudo || game.equipe_mandante?.escudo || getClubLogo(homeName);
-            const awayLogo = game.visitante?.url_escudo || game.equipe_visitante?.escudo || getClubLogo(awayName);
-
-            let formattedDate = game.data_realizacao || game.data || '';
-            if (formattedDate.includes('/')) {
-              const parts = formattedDate.split('/');
-              if (parts.length === 3) {
-                formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
-              }
-            }
-            if (!formattedDate) {
-              formattedDate = `${year}-${monthStr}-${String(now.getDate()).padStart(2, '0')}`;
-            }
-
-            const timeVal = game.hora || game.hora_realizacao || '16:00';
-            const matchTime = timeVal.length >= 5 ? timeVal.substring(0, 5) : timeVal;
-
-            const compName = game.competicao?.campeonato_nome || game.campeonato?.nome || game.competicao || 'Futebol Brasileiro';
-            const catName = game.competicao?.categoria_nome || game.categoria || '';
-            const { division, round: roundText } = parseMatchDivision(compName, catName, homeName, awayName);
-
-            const transmissions = game.transmissoes || [];
-            const broadcasters = [];
-            if (Array.isArray(transmissions)) {
-              transmissions.forEach((t) => {
-                const bName = typeof t === 'string' ? t : (t.nome || t.veiculo || t.transmissao);
-                if (bName && !broadcasters.includes(bName)) {
-                  broadcasters.push(bName);
-                }
-              });
-            }
-            if (broadcasters.length === 0) broadcasters.push('CBF TV');
-
-            // Scores & Penalties from CBF API (gols, penaltis)
-            let matchScore = null;
-            if (
-              game.mandante?.gols !== undefined && game.mandante?.gols !== null && game.mandante?.gols !== '' &&
-              game.visitante?.gols !== undefined && game.visitante?.gols !== null && game.visitante?.gols !== ''
-            ) {
-              const hGols = parseInt(game.mandante.gols, 10);
-              const aGols = parseInt(game.visitante.gols, 10);
-              if (!isNaN(hGols) && !isNaN(aGols)) {
-                let penObj = undefined;
-                if (game.mandante?.penaltis && game.visitante?.penaltis && (game.mandante.penaltis !== '0' || game.visitante.penaltis !== '0')) {
-                  penObj = {
-                    home: parseInt(game.mandante.penaltis, 10),
-                    away: parseInt(game.visitante.penaltis, 10)
-                  };
-                }
-                matchScore = {
-                  home: hGols,
-                  away: aGols,
-                  penalties: penObj,
-                  display: penObj ? `${hGols} (${penObj.home}) - (${penObj.away}) ${aGols}` : `${hGols} - ${aGols}`
-                };
-              }
-            }
-
-            scrapedGames.push({
-              id: `api-cbf-${game.id || game.id_jogo || Math.random().toString(36).substring(2, 9)}`,
-              sport: 'futebol',
-              homeTeam: homeName,
-              homeTeamLogo: homeLogo,
-              awayTeam: awayName,
-              awayTeamLogo: awayLogo,
-              date: formattedDate,
-              time: matchTime,
-              division: division,
-              round: roundText,
-              stadium: game.local || 'A definir',
-              broadcasters: broadcasters,
-              score: matchScore,
-              homeScore: matchScore ? matchScore.home : null,
-              awayScore: matchScore ? matchScore.away : null,
-              status: 'agendado',
-              scraped: true
-            });
-          } catch (itemErr) {
-            console.warn('Erro ao processar item individual:', itemErr);
-          }
+          const parsed = mapRawCBFGame(game);
+          if (parsed) addOrUpdateGame(parsed);
         }
 
         page++;
       } catch (err) {
         console.warn(`Erro na busca da página ${page}:`, err);
         break;
+      }
+    }
+
+    // FASE 4: Jogos confirmados (Copa Betano e Série A)
+    const confirmedRescheduledMatches = [
+      {
+        id: 'cbf-adiado-fla-mir-20260902',
+        sport: 'futebol',
+        competition: 'Campeonato Brasileiro Série A',
+        division: 'Série A',
+        round: '4ª Rodada (Jogo Adiado)',
+        homeTeam: 'Flamengo',
+        homeTeamSlug: 'flamengo',
+        homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
+        awayTeam: 'Mirassol',
+        awayTeamSlug: 'mirassol',
+        awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20385/escudo.jpg',
+        date: '2026-09-02',
+        time: '19:30',
+        stadium: 'Estádio do Maracanã - Rio de Janeiro, RJ',
+        broadcasters: ['Premiere'],
+        transmissionDetails: [
+          { label: 'Premiere', url: 'https://ge.globo.com/premiere/' }
+        ],
+        transmissionUrl: 'https://ge.globo.com/premiere/',
+        status: 'agendado',
+        scraped: true
+      },
+      {
+        id: 'copa-betano-cru-cam-20260911',
+        sport: 'futebol',
+        competition: 'Copa Betano do Brasil',
+        division: 'Copa Betano',
+        round: 'Quartas de Final (Volta)',
+        homeTeam: 'Cruzeiro',
+        homeTeamSlug: 'cruzeiro',
+        homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20025/escudo.jpg',
+        awayTeam: 'Atlético Mineiro',
+        awayTeamSlug: 'atletico-mineiro',
+        awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20005/escudo.jpg',
+        date: '2026-09-11',
+        time: '21:30',
+        stadium: 'Estádio Mineirão - Belo Horizonte, MG',
+        broadcasters: ['Sportv', 'Premiere', 'Amazon Prime'],
+        transmissionUrl: 'https://www.primevideo.com/',
+        status: 'agendado',
+        scraped: true
+      },
+      {
+        id: 'copa-betano-vas-vit-20260912',
+        sport: 'futebol',
+        competition: 'Copa Betano do Brasil',
+        division: 'Copa Betano',
+        round: 'Quartas de Final (Volta)',
+        homeTeam: 'Vasco da Gama',
+        homeTeamSlug: 'vasco-da-gama',
+        homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20028/escudo.jpg',
+        awayTeam: 'Vitória',
+        awayTeamSlug: 'vitoria',
+        awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20032/escudo.jpg',
+        date: '2026-09-12',
+        time: '21:30',
+        stadium: 'Estádio São Januário - Rio de Janeiro, RJ',
+        broadcasters: ['Sportv', 'Premiere', 'Amazon Prime', 'Globo'],
+        transmissionUrl: 'https://www.primevideo.com/',
+        status: 'agendado',
+        scraped: true
+      },
+      {
+        id: 'copa-betano-pal-san-20260912',
+        sport: 'futebol',
+        competition: 'Copa Betano do Brasil',
+        division: 'Copa Betano',
+        round: 'Quartas de Final (Volta)',
+        homeTeam: 'Palmeiras',
+        homeTeamSlug: 'palmeiras',
+        homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20023/escudo.jpg',
+        awayTeam: 'Santos',
+        awayTeamSlug: 'santos',
+        awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20027/escudo.jpg',
+        date: '2026-09-12',
+        time: '21:30',
+        stadium: 'Allianz Parque - São Paulo, SP',
+        broadcasters: ['Sportv', 'Premiere', 'Amazon Prime', 'Globo'],
+        transmissionUrl: 'https://www.primevideo.com/',
+        status: 'agendado',
+        scraped: true
+      },
+      {
+        id: 'copa-betano-int-gre-20260913',
+        sport: 'futebol',
+        competition: 'Copa Betano do Brasil',
+        division: 'Copa Betano',
+        round: 'Quartas de Final (Volta)',
+        homeTeam: 'Internacional',
+        homeTeamSlug: 'internacional',
+        homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20019/escudo.jpg',
+        awayTeam: 'Grêmio',
+        awayTeamSlug: 'gremio',
+        awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20018/escudo.jpg',
+        date: '2026-09-13',
+        time: '20:00',
+        stadium: 'Estádio Beira-Rio - Porto Alegre, RS',
+        broadcasters: ['Amazon Prime', 'Premiere'],
+        transmissionUrl: 'https://www.primevideo.com/',
+        status: 'agendado',
+        scraped: true
+      }
+    ];
+
+    for (const conf of confirmedRescheduledMatches) {
+      addOrUpdateGame(conf);
+    }
+
+    for (const match of confirmedRescheduledMatches) {
+      const alreadyExists = scrapedGames.some(g =>
+        g.date === match.date &&
+        ((g.homeTeam?.toLowerCase().includes('flamengo') && g.awayTeam?.toLowerCase().includes('mirassol')) ||
+         (g.homeTeam?.toLowerCase().includes('mirassol') && g.awayTeam?.toLowerCase().includes('flamengo')))
+      );
+      if (!alreadyExists) {
+        scrapedGames.push(match);
       }
     }
 

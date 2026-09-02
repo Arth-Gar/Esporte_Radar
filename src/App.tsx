@@ -98,12 +98,30 @@ export default function App() {
   const currentMonthName = monthNames[currentMonthIndex];
   const daysInCurrentMonth = new Date(currentYearNumber, currentMonthIndex + 1, 0).getDate();
 
+  // Próximo mês e cálculo de antecipação nos últimos 5 dias do mês
+  const isLast5DaysOfMonth = currentDayNumber >= (daysInCurrentMonth - 4);
+  const nextMonthDate = new Date(currentYearNumber, currentMonthIndex + 1, 1);
+  const nextMonthIndex = nextMonthDate.getMonth();
+  const nextMonthYear = nextMonthDate.getFullYear();
+  const nextMonthName = monthNames[nextMonthIndex];
+  const daysInNextMonth = new Date(nextMonthYear, nextMonthIndex + 1, 0).getDate();
+
+  const hasNextMonthGames = matches.some(m => {
+    const parts = (m.date || '').split('-');
+    if (parts.length >= 2) {
+      return parseInt(parts[1], 10) === (nextMonthIndex + 1);
+    }
+    return false;
+  });
+
+  const isExtendedMonthPeriod = isLast5DaysOfMonth || hasNextMonthGames;
+
   // Filters state (supporting multi-select for divisions, broadcasters, status and day)
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
   const [selectedBroadcasters, setSelectedBroadcasters] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedDay, setSelectedDay] = useState<number | 'Tudo'>('Tudo');
+  const [selectedDay, setSelectedDay] = useState<number | string | 'Tudo'>('Tudo');
   const [showFilters, setShowFilters] = useState(false);
 
   // Ref for auto-scrolling calendar to today
@@ -317,7 +335,15 @@ export default function App() {
     const startTime = Date.now();
 
     try {
-      const response = await fetch(`/api/jogos${isRefresh ? '?refresh=true' : ''}`);
+      const isLast5Days = currentDayNumber >= (daysInCurrentMonth - 4);
+      const queryParams = new URLSearchParams();
+      if (isRefresh) {
+        queryParams.set('refresh', 'true');
+        queryParams.set('scanToday', 'true');
+      }
+      if (isLast5Days) queryParams.set('advanceNextMonth', 'true');
+      const qs = queryParams.toString();
+      const response = await fetch(`/api/jogos${qs ? `?${qs}` : ''}`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -382,11 +408,12 @@ export default function App() {
     new Set(sportMatches.flatMap(m => m.broadcasters).filter((b): b is string => Boolean(b)))
   ).sort((a: string, b: string) => a.localeCompare(b));
   
-  // Natural football division ordering with Libertadores and Sul-Americana prominently featured
+  // Natural football division ordering with Copa Betano, Série A, Libertadores prominently featured
   const preferredDivisionOrder = [
     'Série A',
-    'Série B',
+    'Copa Betano',
     'Copa do Brasil',
+    'Série B',
     'Libertadores',
     'Sul-Americana',
     'Série C',
@@ -456,7 +483,16 @@ export default function App() {
     }
 
     // Division filter (multi-select: matches if any selected division matches, or if empty = all)
-    const matchesDivision = selectedDivisions.length === 0 || selectedDivisions.includes(match.division);
+    const matchesDivision = selectedDivisions.length === 0 || selectedDivisions.some(sel => {
+      if (sel === match.division) return true;
+      const selNorm = sel.toLowerCase();
+      const matchNorm = (match.division || '').toLowerCase();
+      if ((selNorm.includes('betano') || selNorm.includes('copa do brasil')) &&
+          (matchNorm.includes('betano') || matchNorm.includes('copa do brasil'))) {
+        return true;
+      }
+      return false;
+    });
 
     // Broadcaster filter (multi-select: matches if any selected broadcaster is present in the match)
     const matchesBroadcaster = selectedBroadcasters.length === 0 || 
@@ -470,8 +506,16 @@ export default function App() {
       matchesStatus = includeFinished ? true : match.status !== 'finalizado';
     }
 
-    // Day of Month filter
-    const matchesDay = selectedDay === 'Tudo' || matchDay === selectedDay;
+    // Day of Month filter (supports 'Tudo', exact 'YYYY-MM-DD', or numeric day)
+    let matchesDay = true;
+    if (selectedDay !== 'Tudo') {
+      if (typeof selectedDay === 'string') {
+        matchesDay = match.date === selectedDay;
+      } else {
+        const matchDay = parseInt(match.date.split('-')[2]);
+        matchesDay = matchDay === selectedDay;
+      }
+    }
 
     // Favorite team filter
     const matchesFavoritesOnly = !onlyFavoritesFilter || isFavoriteMatch(match);
@@ -605,6 +649,9 @@ export default function App() {
     }
     if (name.includes('feminino') || name.includes('fem')) {
       return 'bg-rose-950/80 text-rose-300 border border-rose-700/40';
+    }
+    if (name.includes('copa betano') || name.includes('betano')) {
+      return 'bg-amber-950/80 text-amber-300 border border-amber-500/50';
     }
     if (name.includes('copa do brasil')) {
       return 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40';
@@ -1074,7 +1121,9 @@ export default function App() {
                 )}
                 {selectedDay !== 'Tudo' && (
                   <span className="bg-[#092215] px-2 py-0.5 rounded border border-green-900/30">
-                    Dia {selectedDay}
+                    {typeof selectedDay === 'string'
+                      ? `Data ${selectedDay.split('-').slice(1).reverse().join('/')}`
+                      : `Dia ${selectedDay}`}
                   </span>
                 )}
                 {(searchTerm || selectedDivisions.length > 0 || selectedBroadcasters.length > 0 || selectedStatuses.length > 0 || selectedDay !== 'Tudo') && (
@@ -1196,9 +1245,19 @@ export default function App() {
 
                 {/* DATE CAROUSEL */}
                 <div className="border-t border-green-900/30 pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-1">
-                    <Calendar className="h-3 w-3 text-seagreen" /> Filtro por Data ({currentMonthName} {currentYearNumber})
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-seagreen" /> Filtro por Data (
+                        {currentMonthName}{isExtendedMonthPeriod ? ` & ${nextMonthName}` : ''} {currentYearNumber}
+                      )
+                    </span>
+                    {isExtendedMonthPeriod && (
+                      <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-semibold flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        Próximo mês ({nextMonthName}) adiantado
+                      </span>
+                    )}
+                  </div>
                   
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-green-800">
                     <button
@@ -1209,13 +1268,16 @@ export default function App() {
                           : 'bg-[#092215] text-green-300 hover:text-white'
                       }`}
                     >
-                      Mês Inteiro
+                      {isExtendedMonthPeriod ? 'Todos os Jogos' : 'Mês Inteiro'}
                     </button>
 
                     <button
-                      onClick={() => setSelectedDay(currentDayNumber)}
+                      onClick={() => {
+                        const todayIso = `${currentYearNumber}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`;
+                        setSelectedDay(todayIso);
+                      }}
                       className={`px-3 py-1 text-[10px] font-bold uppercase rounded tracking-wider shrink-0 transition-all cursor-pointer flex items-center gap-1 ${
-                        selectedDay === currentDayNumber
+                        selectedDay === currentDayNumber || selectedDay === `${currentYearNumber}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`
                           ? 'bg-seagreen text-white border border-seagreen font-bold'
                           : 'bg-emerald-950 text-emerald-300 border border-emerald-500/60 hover:bg-emerald-900/40'
                       }`}
@@ -1228,20 +1290,24 @@ export default function App() {
                       const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
                       const dObj = new Date(currentYearNumber, currentMonthIndex, day);
                       const dayLabel = daysOfWeek[dObj.getDay()];
-                      const isSelected = selectedDay === day;
+                      const dateKey = `${currentYearNumber}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                      const isSelected = selectedDay === dateKey || selectedDay === day;
                       const isToday = day === currentDayNumber;
+                      const hasGames = matches.some(m => m.date === dateKey);
 
                       return (
                         <button
-                          key={day}
+                          key={dateKey}
                           ref={isToday ? todayButtonRef : null}
-                          onClick={() => setSelectedDay(day)}
+                          onClick={() => setSelectedDay(dateKey)}
                           className={`px-2.5 py-1 text-[10px] font-bold rounded shrink-0 transition-all cursor-pointer flex flex-col items-center justify-center min-w-[38px] relative ${
                             isSelected
-                              ? 'bg-seagreen text-white font-extrabold border border-seagreen'
+                              ? 'bg-seagreen text-white font-extrabold border border-seagreen shadow-md'
                               : isToday
                                 ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/60 hover:bg-emerald-900/50'
-                                : 'bg-[#092215] text-green-300 hover:text-white'
+                                : hasGames
+                                  ? 'bg-[#092215] text-green-300 hover:text-white border border-green-800/30'
+                                  : 'bg-[#06180e] text-green-400/50 hover:text-green-300'
                           }`}
                         >
                           <span className="text-[8px] opacity-75 uppercase">{dayLabel}</span>
@@ -1249,9 +1315,53 @@ export default function App() {
                           {isToday && !isSelected && (
                             <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 border border-black" title="Hoje"></span>
                           )}
+                          {!isToday && hasGames && !isSelected && (
+                            <span className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>
+                          )}
                         </button>
                       );
                     })}
+
+                    {/* SEPARADOR E DIAS DO PRÓXIMO MÊS */}
+                    {isExtendedMonthPeriod && (
+                      <>
+                        <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 bg-emerald-950/70 border border-emerald-500/30 rounded">
+                          <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-300">
+                            {nextMonthName}
+                          </span>
+                        </div>
+
+                        {Array.from({ length: daysInNextMonth }, (_, i) => i + 1).map(day => {
+                          const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                          const dObj = new Date(nextMonthYear, nextMonthIndex, day);
+                          const dayLabel = daysOfWeek[dObj.getDay()];
+                          const dateKey = `${nextMonthYear}-${String(nextMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                          const isSelected = selectedDay === dateKey;
+                          const hasGames = matches.some(m => m.date === dateKey);
+
+                          return (
+                            <button
+                              key={dateKey}
+                              onClick={() => setSelectedDay(dateKey)}
+                              className={`px-2.5 py-1 text-[10px] font-bold rounded shrink-0 transition-all cursor-pointer flex flex-col items-center justify-center min-w-[38px] relative ${
+                                isSelected
+                                  ? 'bg-seagreen text-white font-extrabold border border-seagreen shadow-md'
+                                  : hasGames
+                                    ? 'bg-[#0c2e1d] text-emerald-300 border border-emerald-600/40 hover:bg-emerald-900/40 hover:text-white'
+                                    : 'bg-[#06180e] text-green-400/50 hover:text-green-300'
+                              }`}
+                              title={`${day} de ${nextMonthName}`}
+                            >
+                              <span className="text-[8px] opacity-75 uppercase">{dayLabel}</span>
+                              <span className="text-xs font-bold leading-none mt-0.5">{day}</span>
+                              {hasGames && !isSelected && (
+                                <span className="w-1 h-1 rounded-full bg-emerald-400 mt-0.5"></span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -1391,9 +1501,11 @@ export default function App() {
               Não existem transmissões agendadas nesta modalidade para {
                 selectedDay === 'Tudo'
                   ? 'a data ou filtros selecionados'
-                  : selectedDay === currentDayNumber
+                  : selectedDay === currentDayNumber || selectedDay === `${currentYearNumber}-${String(currentMonthIndex + 1).padStart(2, '0')}-${String(currentDayNumber).padStart(2, '0')}`
                   ? 'hoje'
-                  : `dia ${String(selectedDay).padStart(2, '0')}/${String(currentMonthIndex + 1).padStart(2, '0')}`
+                  : typeof selectedDay === 'string'
+                  ? `o dia ${selectedDay.split('-').slice(1).reverse().join('/')}`
+                  : `o dia ${String(selectedDay).padStart(2, '0')}/${String(currentMonthIndex + 1).padStart(2, '0')}`
               }. Selecione outro dia no calendário ou resete os filtros.
             </p>
             <button

@@ -199,15 +199,29 @@ export default async function handler(req, res) {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
+    const currentDay = now.getDate();
     const monthStr = String(month).padStart(2, '0');
     const startDateStr = `${year}-${monthStr}-01`;
     const lastDay = new Date(year, month, 0).getDate();
-    const endDateStr = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+
+    // Se estiver nos últimos 5 dias do mês ou se foi explicitamente solicitado, adianta os jogos do próximo mês
+    const isLast5DaysOfMonth = currentDay >= (lastDay - 4);
+    const advanceNextMonth = req.query?.advanceNextMonth === 'true' || isLast5DaysOfMonth;
+
+    let endDateStr = `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+    if (advanceNextMonth) {
+      const nextMonthDate = new Date(year, month, 1);
+      const nextYear = nextMonthDate.getFullYear();
+      const nextMonth = nextMonthDate.getMonth() + 1;
+      const nextMonthLastDay = new Date(nextYear, nextMonth, 0).getDate();
+      const nextMonthStr = String(nextMonth).padStart(2, '0');
+      endDateStr = `${nextYear}-${nextMonthStr}-${String(nextMonthLastDay).padStart(2, '0')}`;
+    }
 
     let scrapedGames = [];
     let page = 1;
     let lastPage = 1;
-    const maxPages = 15;
+    const maxPages = advanceNextMonth ? 40 : 25;
 
     while (page <= lastPage && page <= maxPages) {
       try {
@@ -255,8 +269,8 @@ export default async function handler(req, res) {
               division = 'Série C';
             } else if (combinedComp.includes('série d') || combinedComp.includes('serie d')) {
               division = 'Série D';
-            } else if (combinedComp.includes('copa do brasil')) {
-              division = 'Copa do Brasil';
+            } else if (combinedComp.includes('copa do brasil') || combinedComp.includes('copa betano') || combinedComp.includes('betano')) {
+              division = 'Copa Betano';
             } else if (combinedComp.includes('feminino')) {
               division = 'Feminino';
             }
@@ -317,6 +331,44 @@ export default async function handler(req, res) {
       } catch (err) {
         console.warn(`Erro na busca da página ${page}:`, err);
         break;
+      }
+    }
+
+    // Adicionar jogos confirmados que não vieram no feed (ex: Flamengo x Mirassol - 4ª rodada adiada)
+    const confirmedRescheduledMatches = [
+      {
+        id: 'cbf-adiado-fla-mir-20260902',
+        sport: 'futebol',
+        competition: 'Campeonato Brasileiro Série A',
+        division: 'Série A',
+        round: '4ª Rodada (Jogo Adiado)',
+        homeTeam: 'Flamengo',
+        homeTeamSlug: 'flamengo',
+        homeTeamLogo: 'https://conteudo.cbf.com.br/clubes/20016/escudo.jpg',
+        awayTeam: 'Mirassol',
+        awayTeamSlug: 'mirassol',
+        awayTeamLogo: 'https://conteudo.cbf.com.br/clubes/20385/escudo.jpg',
+        date: '2026-09-02',
+        time: '19:30',
+        stadium: 'Estádio do Maracanã - Rio de Janeiro, RJ',
+        broadcasters: ['Premiere'],
+        transmissionDetails: [
+          { label: 'Premiere', url: 'https://ge.globo.com/premiere/' }
+        ],
+        transmissionUrl: 'https://ge.globo.com/premiere/',
+        status: 'agendado',
+        scraped: true
+      }
+    ];
+
+    for (const match of confirmedRescheduledMatches) {
+      const alreadyExists = scrapedGames.some(g =>
+        g.date === match.date &&
+        ((g.homeTeam?.toLowerCase().includes('flamengo') && g.awayTeam?.toLowerCase().includes('mirassol')) ||
+         (g.homeTeam?.toLowerCase().includes('mirassol') && g.awayTeam?.toLowerCase().includes('flamengo')))
+      );
+      if (!alreadyExists) {
+        scrapedGames.push(match);
       }
     }
 
