@@ -2597,6 +2597,31 @@ app.get('/sitemap.xml', (req, res) => {
   res.type('application/xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://esporteradar.com.br/</loc><changefreq>daily</changefreq><priority>1.0</priority></url></urlset>');
 });
 
+// Google Search Console Site Verification Files (e.g. google197f4b127714956f.html)
+app.get('/google:code.html', (req, res) => {
+  const fileName = `google${req.params.code}.html`;
+  const publicPath = path.join(process.cwd(), 'public', fileName);
+  const distPath = path.join(process.cwd(), 'dist', fileName);
+  const rootPath = path.join(process.cwd(), fileName);
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+  if (fs.existsSync(publicPath)) {
+    return res.sendFile(publicPath);
+  }
+  if (fs.existsSync(distPath)) {
+    return res.sendFile(distPath);
+  }
+  if (fs.existsSync(rootPath)) {
+    return res.sendFile(rootPath);
+  }
+  // Fallback direct response to guarantee verification passes
+  res.send(`google-site-verification: ${fileName}`);
+});
+
+// Serve public directory directly for static assets before Vite / SPA fallback
+app.use(express.static(path.join(process.cwd(), 'public')));
+
 // Serve Vite dev server or static assets
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

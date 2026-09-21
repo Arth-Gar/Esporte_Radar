@@ -385,7 +385,7 @@ export default function App() {
       console.warn('Conexão instável ao buscar transmissões. Mantendo lista atual:', error);
     } finally {
       const elapsedTime = Date.now() - startTime;
-      const minDuration = 1500; // Animação de pré-carregamento bonita de 1.5 segundos
+      const minDuration = 1900; // Animação de radar calibrada para exatamente 1.9 segundos
       const remainingTime = Math.max(0, minDuration - elapsedTime);
 
       setTimeout(() => {
@@ -700,7 +700,7 @@ export default function App() {
       isLight ? 'bg-slate-100 text-slate-900 light' : 'bg-[#020704] text-slate-100 dark'
     } ${isHighContrast ? 'high-contrast' : ''} ${fontSizeClass}`}>
       
-      {/* FULLSCREEN PRELOADER (1.5s) */}
+      {/* FULLSCREEN PRELOADER (1.9s) */}
       <Preloader isLoading={loading} />
 
       {/* FLOATING AUDIO READER BAR (QUANDO HÁ LEITURA DE VOZ EM EXECUÇÃO) */}

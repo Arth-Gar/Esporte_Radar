@@ -7,7 +7,7 @@
       "destination": "/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|robots\\.txt|ads\\.txt|sitemap\\.xml|google.*\\.html|.*\\.[a-zA-Z0-9]+$).*)",
       "destination": "/index.html"
     }
   ]

@@ -17,7 +17,7 @@ export function Preloader({ isLoading, onFinished }: PreloaderProps) {
 
     setProgress(0);
     const startTime = Date.now();
-    const duration = 3500; // 3.5s exatos
+    const duration = 1900; // 1.9s exatos
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
