@@ -134,7 +134,7 @@ export function Preloader({ isLoading, onFinished }: PreloaderProps) {
             </div>
 
             {/* TÍTULO E BARRA DE PROGRESSO SLIM */}
-            <div className="mt-6 flex flex-col items-center space-y-3">
+            <div className="mt-6 flex flex-col items-center space-y-3 min-h-[92px]">
               <h1 className="text-xl sm:text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 uppercase">
                 ESPORTE RADAR
               </h1>
@@ -149,8 +149,8 @@ export function Preloader({ isLoading, onFinished }: PreloaderProps) {
                 />
               </div>
 
-              <span className="text-[11px] font-mono font-bold text-emerald-400 tracking-wider">
-                Sintonizando transmissões... {progress}%
+              <span className="text-[11px] font-mono font-bold text-emerald-400 tracking-wider tabular-nums">
+                Sintonizando transmissões... {String(progress).padStart(3, ' ')}%
               </span>
             </div>
 

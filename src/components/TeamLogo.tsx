@@ -40,6 +40,13 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
     .substring(0, 3)
     .toUpperCase() || 'TM';
 
+  const dimensionMap = {
+    sm: { width: 24, height: 24 },
+    md: { width: 32, height: 32 },
+    lg: { width: 40, height: 40 },
+    xl: { width: 64, height: 64 }
+  }[size];
+
   return (
     <div
       className={`relative shrink-0 flex items-center justify-center select-none ${sizeClasses} ${className}`}
@@ -52,6 +59,9 @@ export const TeamLogo: React.FC<TeamLogoProps> = ({
           alt={`Escudo do ${teamName}`}
           referrerPolicy="no-referrer"
           loading="lazy"
+          decoding="async"
+          width={dimensionMap.width}
+          height={dimensionMap.height}
           className="w-full h-full object-contain transition-transform duration-200 group-hover:scale-105"
           onError={() => {
             setHasError(true);

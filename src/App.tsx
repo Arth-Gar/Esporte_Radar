@@ -1504,14 +1504,32 @@ export default function App() {
 
         {/* LOADING & EMPTY STATES */}
         {loading ? (
-          <div className="py-20 flex flex-col items-center justify-center space-y-4">
-            <div className="relative">
-              <div className="absolute -inset-2 rounded-full border-t-2 border-seagreen animate-spin"></div>
-              <div className="h-12 w-12 rounded-full border border-green-800 flex items-center justify-center">
-                <Radio className="h-5 w-5 text-green-400 animate-pulse" />
-              </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((sk) => (
+                <div
+                  key={`skeleton-${sk}`}
+                  className="rounded-lg p-3 border border-green-950/40 bg-[#05140d]/40 flex flex-col gap-2.5 animate-pulse min-h-[96px]"
+                >
+                  <div className="flex items-center justify-between w-full border-b border-green-900/20 pb-1.5">
+                    <div className="h-3 w-28 bg-green-900/30 rounded" />
+                    <div className="h-3 w-20 bg-green-900/30 rounded" />
+                  </div>
+                  <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center gap-2 w-[45%]">
+                      <div className="w-8 h-8 rounded-full bg-green-900/40 shrink-0" />
+                      <div className="h-4 w-24 bg-green-900/30 rounded" />
+                    </div>
+                    <div className="h-4 w-6 bg-green-900/20 rounded" />
+                    <div className="flex items-center gap-2 w-[45%] justify-end">
+                      <div className="h-4 w-24 bg-green-900/30 rounded" />
+                      <div className="w-8 h-8 rounded-full bg-green-900/40 shrink-0" />
+                    </div>
+                  </div>
+                  <div className="h-2.5 w-36 bg-green-900/20 rounded" />
+                </div>
+              ))}
             </div>
-            <p className="text-xs text-green-400 font-mono tracking-widest uppercase animate-pulse">Carregando transmissões do Esporte Radar...</p>
           </div>
         ) : sortedMatches.length === 0 ? (
           <div className="p-12 text-center rounded-lg bg-[#05140d] border border-green-950/60 space-y-4 max-w-lg mx-auto shadow-xl">

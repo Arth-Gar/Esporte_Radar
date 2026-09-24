@@ -66,14 +66,16 @@ export const AdSlot: React.FC<AdSlotProps> = ({ adUnit, sizes, id, label = "Publ
   }
 
   return (
-    <div className={`w-full flex flex-col items-center justify-center p-2.5 my-3 bg-[#0a2e1e]/30 border border-green-900/20 rounded-lg ${className || ''}`}>
+    <div 
+      className={`w-full flex flex-col items-center justify-center p-2.5 my-3 bg-[#0a2e1e]/30 border border-green-900/20 rounded-lg min-h-[85px] contain-layout ${className || ''}`}
+    >
       <span className="text-[8px] font-mono tracking-widest text-green-600/80 uppercase mb-1.5 select-none">
         {label}
       </span>
       <div 
         id={id} 
         className="bg-black/10 rounded flex items-center justify-center overflow-hidden border border-green-950/40" 
-        style={{ minWidth: '320px', minHeight: '50px' }} 
+        style={{ minWidth: '300px', minHeight: '50px' }} 
       />
     </div>
   );
